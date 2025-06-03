@@ -3,10 +3,12 @@ package com.wang.phoneaiassistant.ui.chat
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.wang.phoneaiassistant.data.preferences.AppPreferences
-import retrofit2.Retrofit
+import com.wang.phoneaiassistant.data.network.AiApiService
+import com.wang.phoneaiassistant.data.network.entity.Message
+import com.wang.phoneaiassistant.data.network.entity.ModelInfo
+import com.wang.phoneaiassistant.data.network.entity.ChatRequest
 
-class ChatViewModel : ViewModel() {
+class ChatViewModel(private val baseUrl: String) : ViewModel() {
 
     var messages = mutableStateListOf(
         Message("assistant", "你好，我是你的 AI 助手！")
@@ -35,6 +37,8 @@ class ChatViewModel : ViewModel() {
 
         // 添加用户消息
         messages.add(Message("user", text))
+        val chatMessage = ChatRequest(selectedModel.value.id, messages)
+
 
         // 模拟助手回复
         val reply = "（${selectedModel.value.name} 回复）这是回复内容。"

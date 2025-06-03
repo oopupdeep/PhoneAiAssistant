@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wang.phoneaiassistant.data.preferences.AppPreferences
+import com.wang.phoneaiassistant.data.network.entity.Message
+import com.wang.phoneaiassistant.data.network.entity.ModelInfo
 import kotlinx.coroutines.launch
 
 
@@ -209,9 +211,7 @@ fun DropdownMenuButton(currentModel: ModelInfo, onModelSelected: (ModelInfo) -> 
     }
 }
 
-data class Message(val role: String, val content: String)
 
-data class ModelInfo(val id: String, val name: String)
 
 val mockModels = listOf(
     ModelInfo("gpt-4", "OpenAI GPT-4"),
