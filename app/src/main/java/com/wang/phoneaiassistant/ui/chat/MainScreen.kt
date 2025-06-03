@@ -179,8 +179,14 @@ fun MessageBubble(message: Message) {
 }
 
 @Composable
-fun DropdownMenuButton(currentModel: ModelInfo, onModelSelected: (ModelInfo) -> Unit) {
+fun DropdownMenuButton(currentModel: ModelInfo, viewModel: ChatViewModel = viewModel(), onModelSelected: (ModelInfo) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val models by viewModel.models.observeAsState(initial = emptyList())
+
+    // 👇 初次进入时调用一次加载模型
+    LaunchedEffect(Unit) {
+        viewModel.loadModels()
+    }
 
     Box {
         OutlinedButton(
@@ -198,7 +204,9 @@ fun DropdownMenuButton(currentModel: ModelInfo, onModelSelected: (ModelInfo) -> 
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            mockModels.forEach { model ->
+//            val models = viewModel.loadModels()
+
+            models.forEach { model ->
                 DropdownMenuItem(
                     text = { Text(model.name) },
                     onClick = {
@@ -213,11 +221,6 @@ fun DropdownMenuButton(currentModel: ModelInfo, onModelSelected: (ModelInfo) -> 
 
 
 
-val mockModels = listOf(
-    ModelInfo("gpt-4", "OpenAI GPT-4"),
-    ModelInfo("gemini", "Gemini Pro"),
-    ModelInfo("llama", "LLaMA (Local)")
-)
 
 @Preview(showBackground = true)
 @Composable

@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.okhttp.logging)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
 
     // Tooling（用于预览和调试）

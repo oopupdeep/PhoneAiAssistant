@@ -10,7 +10,7 @@ class ModelRepository(private val modelService: ModelService) {
         try {
             modelService.getModels()
         } catch (e: Exception) {
-            emptyList() // 失败时返回空列表
+            emptyList()
         }
     }
 }
