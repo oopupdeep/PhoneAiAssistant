@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-
+    implementation(libs.androidx.runtime.livedata)
 
     // Tooling（用于预览和调试）
     debugImplementation(libs.androidx.compose.ui.tooling)
