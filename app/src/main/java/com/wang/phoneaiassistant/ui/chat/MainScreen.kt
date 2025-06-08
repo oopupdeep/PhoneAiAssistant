@@ -22,8 +22,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wang.phoneaiassistant.data.preferences.AppPreferences
 import com.wang.phoneaiassistant.data.network.entity.Message
 import com.wang.phoneaiassistant.data.network.entity.ModelInfo
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +44,7 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("模型：${selectedModel.name}", style = MaterialTheme.typography.titleMedium)
+                        Text("模型：${selectedModel.id}", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.width(8.dp))
                         DropdownMenuButton(selectedModel) {
                             viewModel.onModelSelected(it)
@@ -180,12 +180,22 @@ fun MessageBubble(message: Message) {
 }
 
 @Composable
-fun DropdownMenuButton(currentModel: ModelInfo, viewModel: ChatViewModel = viewModel(), onModelSelected: (ModelInfo) -> Unit) {
+fun DropdownMenuButton(
+    currentModel: ModelInfo,
+    viewModel: ChatViewModel = viewModel(),
+    onModelSelected: (ModelInfo) -> Unit
+) {
+    // 1. 使用 remember 管理菜单的展开/折叠状态
     var expanded by remember { mutableStateOf(false) }
+
+    // 2. 观察 ViewModel 中的 models LiveData (或 StateFlow)
+    //    当 LiveData 更新时，这个 Composable 会自动重组，models 会获得新值
     val models by viewModel.models.observeAsState(initial = emptyList())
 
-    // 👇 初次进入时调用一次加载模型
+    // 3. 使用 LaunchedEffect 在 Composable 首次进入屏幕时执行副作用
+    //    key1 = Unit 保证这个效应只执行一次，是加载初始数据的理想位置
     LaunchedEffect(Unit) {
+        // 调用 ViewModel 的方法来加载模型列表
         viewModel.loadModels()
     }
 
@@ -197,22 +207,22 @@ fun DropdownMenuButton(currentModel: ModelInfo, viewModel: ChatViewModel = viewM
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         ) {
-            Text(currentModel.name)
+            Text(currentModel.id)
         }
+
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
-//            val models = viewModel.loadModels()
-
+            // 4. 直接遍历从 observeAsState 获得的 models 状态
+            //    这个列表是响应式的，会自动反映 ViewModel 中的最新数据
             models.forEach { model ->
                 DropdownMenuItem(
-                    text = { Text(model.name) },
+                    text = { Text(model.id) },
                     onClick = {
                         onModelSelected(model)
-                        expanded = false
+                        expanded = false // 选择后关闭菜单
                     }
                 )
             }

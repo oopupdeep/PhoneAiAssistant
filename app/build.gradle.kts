@@ -1,8 +1,13 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.dagger.hilt)
+    alias(libs.plugins.kotlin.compose.compiler) // <--- 添加这一行
+    kotlin("kapt")
 }
-
+hilt {
+    enableAggregatingTask = false
+}
 android {
     namespace = "com.wang.phoneaiassistant"
     compileSdk = 35
@@ -17,7 +22,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
+        debug {
+            // .debug 独有的配置
+            applicationIdSuffix = ".debug" // e.g., com.example.myapp.debug
+            versionNameSuffix = "-debug"   // e.g., 1.0-debug
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -28,12 +43,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -52,6 +67,7 @@ android {
 }
 
 dependencies {
+    implementation(platform(libs.androidx.compose.bom))
     // 核心库
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -69,7 +85,9 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.compose.runtime.livedata)
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 
     // Tooling（用于预览和调试）
     debugImplementation(libs.androidx.compose.ui.tooling)
