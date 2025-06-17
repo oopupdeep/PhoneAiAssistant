@@ -1,14 +1,25 @@
 package com.wang.phoneaiassistant.data.network.entity
 
+import com.google.gson.annotations.SerializedName
+
 data class ChatResponse(
+    @SerializedName("id")
     val id: String,
+    @SerializedName("type")
     val type: String,
+    @SerializedName("role")
     val role: String,
-    val content: Content
+    @SerializedName("choices")
+    val choices: List<Content>?
 )
 
 data class Content(
-    val type: String,
-    val text: String,
-    val annotations: List<String>
+    @SerializedName("index")
+    val index: Int,
+    @SerializedName("message")
+    val message: Message,
+    @SerializedName("logprobs")
+    val logprobs: Int?,
+    @SerializedName("finish_reason")
+    val finishReason: String
 )

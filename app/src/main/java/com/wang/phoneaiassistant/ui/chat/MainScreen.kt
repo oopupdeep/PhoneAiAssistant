@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
@@ -34,6 +35,14 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    // ✨ 关键改动：优化自动滚动逻辑 ✨
+    // 当消息列表的大小或最后一条消息的内容发生变化时，自动滚动到底部
+    LaunchedEffect(messages.size, messages.lastOrNull()?.content) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -80,10 +89,12 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
                         onClick = {
-                            val appPrefs = AppPreferences(this as Context)
-                            viewModel.sendMessage()
+                            viewModel.sendMessageStream()
+                            // 点击发送时也触发一次滚动，确保用户消息可见
                             scope.launch {
-                                listState.animateScrollToItem(messages.size - 1)
+                                if(messages.isNotEmpty()){
+                                    listState.animateScrollToItem(messages.lastIndex)
+                                }
                             }
                         },
                         enabled = input.isNotBlank()
@@ -98,7 +109,6 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
             }
         }
     ) { innerPadding ->
-        // 聊天消息区
         Box(
             modifier = Modifier
                 .padding(innerPadding)
@@ -109,16 +119,10 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                 state = listState,
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxSize(),
-                reverseLayout = false // 最新消息在下方，滚动到底部
+                    .fillMaxSize()
             ) {
-                itemsIndexed(messages) { index, msg ->
-                    // 当新消息到来时，让列表自动滚到底部
-                    LaunchedEffect(messages.size) {
-                        if (index == messages.lastIndex) {
-                            listState.animateScrollToItem(index)
-                        }
-                    }
+                // 使用 key 来帮助Compose优化性能
+                items(messages, key = { it.id }) { msg ->
                     MessageBubble(msg)
                 }
                 item { Spacer(modifier = Modifier.height(8.dp)) }

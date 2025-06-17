@@ -11,11 +11,12 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit // 1. 导入 TimeUnit
 import javax.inject.Singleton
-import com.wang.phoneaiassistant.BuildConfig// 确保导入你的BuildConfig
+import com.wang.phoneaiassistant.BuildConfig
 
 @Module
-@InstallIn(SingletonComponent::class) // 整个应用的生命周期内共享实例
+@InstallIn(SingletonComponent::class)
 object NetworkModule {
 
     @Provides
@@ -27,11 +28,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(prefs: AppPreferences): OkHttpClient {
-        // 1. 创建 HttpLoggingInterceptor
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            // 2. 根据构建类型设置日志级别
-            //    如果是 Debug 版本，则打印所有日志 (BODY)
-            //    如果是 Release 版本，则不打印日志 (NONE)
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -40,9 +37,8 @@ object NetworkModule {
         }
 
         return OkHttpClient.Builder()
-            // 添加用于认证的拦截器，它会在日志拦截器之前执行
             .addInterceptor { chain ->
-                val apiKey = prefs.defaultApiKey // 从注入的AppPreferences获取
+                val apiKey = prefs.defaultApiKey
                 val request = chain.request().newBuilder().apply {
                     if (!apiKey.isNullOrBlank()) {
                         addHeader("Authorization", "Bearer $apiKey")
@@ -50,17 +46,23 @@ object NetworkModule {
                 }.build()
                 chain.proceed(request)
             }
-            // 3. 将配置好的日志拦截器添加到 OkHttpClient
-            //    建议将日志拦截器放在拦截器链的末尾，这样可以捕获前面所有拦截器对请求的修改
             .addInterceptor(loggingInterceptor)
+
+            // --- ✨ 添加的超时设置 ✨ ---
+            // 连接超时：设置与服务器建立连接的最大时间
+            .connectTimeout(20, TimeUnit.SECONDS)
+            // 读取超时：成功连接后，等待服务器返回数据的最大时间。这是解决您问题的关键！
+            .readTimeout(600, TimeUnit.SECONDS)
+            // 写入超时：向服务器发送数据的最大时间
+            .writeTimeout(20, TimeUnit.SECONDS)
+            // --- ✨ 设置结束 ✨ ---
+
             .build()
     }
 
     @Provides
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, prefs: AppPreferences): Retrofit {
-        // Retrofit 的 BaseUrl 也可能需要根据Debug/Release环境切换
-        // 这里我们保持原样，仅作提醒
         val baseUrl = prefs.baseUrl
         return Retrofit.Builder()
             .baseUrl(baseUrl)
@@ -69,6 +71,7 @@ object NetworkModule {
             .build()
     }
 
+    // ... (provideModelService 和 provideChatService 保持不变)
     @Provides
     @Singleton
     fun provideModelService(retrofit: Retrofit): ModelService {
