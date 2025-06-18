@@ -1,5 +1,6 @@
 package com.wang.phoneaiassistant.ui.chat
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
@@ -15,6 +16,7 @@ import com.wang.phoneaiassistant.data.network.entity.StreamResponse
 import com.wang.phoneaiassistant.data.repository.ChatRepository
 import com.wang.phoneaiassistant.data.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,7 +30,7 @@ class ChatViewModel@Inject constructor(
 
     // messages, inputText, selectedModel, models等状态保持不变
     var messages = mutableStateListOf(
-        Message("system", "你是一名有用的AI助手")
+        Message("system", "我是一名有用的AI助手")
     )
         private set
 
@@ -36,7 +38,7 @@ class ChatViewModel@Inject constructor(
         private set
 
     var selectedModel = mutableStateOf(
-        ModelInfo("gpt-4", "OpenAI GPT-4", "OpenAI")
+        ModelInfo("deepseek-chat", "DeepSeek", "DeepSeek")
     )
         private set
 
@@ -51,6 +53,10 @@ class ChatViewModel@Inject constructor(
 
     // Gson实例用于解析JSON
     private val gson = Gson()
+
+    companion object {
+        const val LOADING_MESSAGE_CONTENT = "正在努力获取信息..."
+    }
 
 //    private val _models = MutableLiveData<List<ModelInfo>>()
 //    val models: LiveData<List<ModelInfo>> get() = _models
@@ -127,7 +133,9 @@ class ChatViewModel@Inject constructor(
 
         viewModelScope.launch {
             // 3. 立即为AI的回复添加一个空的占位消息
-            messages.add(Message(role = "assistant", content = ""))
+            messages.add(Message(role = "assistant", content = LOADING_MESSAGE_CONTENT))
+            // 新增一个标志位，用于判断是否是第一个数据块
+            var isFirstChunk = true
 
             try {
                 // 4. 调用仓库的流式方法并收集数据
@@ -156,8 +164,18 @@ class ChatViewModel@Inject constructor(
                                     val lastMessageIndex = messages.lastIndex
                                     val currentMessage = messages[lastMessageIndex]
                                     // 创建一个新消息对象来触发UI更新
-                                    val updatedMessage = currentMessage.copy(content = currentMessage.content + deltaContent)
+                                    val updatedMessage: Message
+                                    if (isFirstChunk) {
+                                        // 如果是第一个数据块，则直接替换内容
+                                        updatedMessage = currentMessage.copy(content = deltaContent)
+                                        // 将标志位设为 false，这样后续的数据块就会走 else 分支
+                                        isFirstChunk = false
+                                    } else {
+                                        // 如果不是第一个数据块，则在现有内容后追加
+                                        updatedMessage = currentMessage.copy(content = currentMessage.content + deltaContent)
+                                    }
                                     messages[lastMessageIndex] = updatedMessage
+                                    delay(50L)
                                 }
                             } catch (e: Exception) {
                                 // 忽略无法解析的行

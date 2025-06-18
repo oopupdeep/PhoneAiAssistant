@@ -23,6 +23,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wang.phoneaiassistant.data.preferences.AppPreferences
 import com.wang.phoneaiassistant.data.network.entity.Message
 import com.wang.phoneaiassistant.data.network.entity.ModelInfo
+import com.wang.phoneaiassistant.ui.LatexView
+import com.wang.phoneaiassistant.ui.ShimmerText
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -53,7 +55,10 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("模型：${selectedModel.id}", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "模型：${selectedModel.id}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         DropdownMenuButton(selectedModel) {
                             viewModel.onModelSelected(it)
@@ -92,7 +97,7 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                             viewModel.sendMessageStream()
                             // 点击发送时也触发一次滚动，确保用户消息可见
                             scope.launch {
-                                if(messages.isNotEmpty()){
+                                if (messages.isNotEmpty()) {
                                     listState.animateScrollToItem(messages.lastIndex)
                                 }
                             }
@@ -172,13 +177,33 @@ fun MessageBubble(message: Message) {
                 .widthIn(max = 280.dp)
                 .shadow(1.dp, bubbleShape)
         ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(12.dp),
-                color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                fontSize = 16.sp,
-                lineHeight = 20.sp
-            )
+            // ✨ 核心改动在这里 ✨
+            // 判断消息内容是否是加载中的占位符
+            val isLoading =
+                (message.content == ChatViewModel.LOADING_MESSAGE_CONTENT && message.role == "assistant")
+
+            if (isLoading) {
+                // 如果是，使用我们创建的 ShimmerText
+                ShimmerText(
+                    text = message.content,
+                    modifier = Modifier.padding(12.dp)
+                )
+            } else {
+//                LatexView(
+//                    latex = message.content,
+//                    modifier = Modifier
+//                        .padding(12.dp)
+//                        .fillMaxWidth() // 让 WebView 有足够的空间渲染
+//                )
+                // 如果不是，使用原来的普通 Text
+                Text(
+                    text = message.content,
+                    modifier = Modifier.padding(12.dp),
+                    color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp
+                )
+            }
         }
     }
 }
@@ -233,8 +258,6 @@ fun DropdownMenuButton(
         }
     }
 }
-
-
 
 
 @Preview(showBackground = true)
