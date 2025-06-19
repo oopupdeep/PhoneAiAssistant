@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.hilt.android)
+    implementation(libs.compose.markdown)
     kapt(libs.hilt.compiler)
 
     // Tooling（用于预览和调试）

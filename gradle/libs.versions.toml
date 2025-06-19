@@ -41,6 +41,8 @@ espressoCore = "3.6.1"
 
 javapoet = "1.13.0"
 
+compose-markdown="0.5.5"
+
 [libraries]
 squareup-javapoet = { group = "com.squareup", name = "javapoet", version.ref = "javapoet" }
 
@@ -84,6 +86,8 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+
+compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "compose-markdown" }
 
 [bundles]
 # 将常用的Compose UI库捆绑在一起，方便在 build.gradle.kts 中调用

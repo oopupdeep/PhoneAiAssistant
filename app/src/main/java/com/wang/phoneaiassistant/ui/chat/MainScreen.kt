@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,7 +28,10 @@ import com.wang.phoneaiassistant.data.network.entity.ModelInfo
 import com.wang.phoneaiassistant.ui.LatexView
 import com.wang.phoneaiassistant.ui.ShimmerText
 import dagger.hilt.android.AndroidEntryPoint
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
+//import com.jeziellago.compose.markdowntext.MarkdownText
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -189,6 +194,20 @@ fun MessageBubble(message: Message) {
                     modifier = Modifier.padding(12.dp)
                 )
             } else {
+                MarkdownText(
+                    modifier = Modifier.padding(12.dp),
+                    markdown = message.content,
+                    maxLines = Int.MAX_VALUE, // 不限制行数
+                    style = TextStyle(
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontSize = 16.sp,
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Start
+                    ),
+                    onLinkClicked = { link ->
+                        println("Link clicked: $link")
+                    }
+                )
 //                LatexView(
 //                    latex = message.content,
 //                    modifier = Modifier
@@ -196,13 +215,13 @@ fun MessageBubble(message: Message) {
 //                        .fillMaxWidth() // 让 WebView 有足够的空间渲染
 //                )
                 // 如果不是，使用原来的普通 Text
-                Text(
-                    text = message.content,
-                    modifier = Modifier.padding(12.dp),
-                    color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp
-                )
+//                Text(
+//                    text = message.content,
+//                    modifier = Modifier.padding(12.dp),
+//                    color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+//                    fontSize = 16.sp,
+//                    lineHeight = 20.sp
+//                )
             }
         }
     }
