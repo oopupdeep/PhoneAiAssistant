@@ -7,11 +7,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit // 1. 导入 TimeUnit
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 import com.wang.phoneaiassistant.BuildConfig
 
@@ -37,8 +38,42 @@ object NetworkModule {
         }
 
         return OkHttpClient.Builder()
+            // 拦截器1：动态设置 BaseUrl (已修正)
             .addInterceptor { chain ->
-                val apiKey = prefs.defaultApiKey
+                val originalRequest = chain.request()
+                val latestBaseUrl = prefs.baseUrl // 例如 "https://api.deepseek.com/v1/"
+
+                val newHttpUrl = latestBaseUrl.toHttpUrlOrNull()
+
+                if (newHttpUrl != null) {
+                    // 1. 从新的baseUrl（包含/v1/路径）创建Builder
+                    val newUrlBuilder = newHttpUrl.newBuilder()
+
+                    // 2. 将原始请求的路径（如 "chat/completions"）追加到新Builder的路径后面
+                    //    originalRequest.url.encodedPath 是 "/chat/completions"，我们去掉开头的"/"
+                    newUrlBuilder.addEncodedPathSegments(originalRequest.url.encodedPath.removePrefix("/"))
+
+                    // 3. 如果原始请求有查询参数，也一并追加
+                    if (originalRequest.url.query != null) {
+                        newUrlBuilder.encodedQuery(originalRequest.url.encodedQuery)
+                    }
+
+                    // 4. 构建出最终的、正确的URL
+                    val finalUrl = newUrlBuilder.build()
+
+                    // 使用最终的URL构建新请求
+                    val newRequest = originalRequest.newBuilder()
+                        .url(finalUrl)
+                        .build()
+
+                    return@addInterceptor chain.proceed(newRequest)
+                }
+
+                chain.proceed(originalRequest)
+            }
+            // 拦截器2：添加认证头
+            .addInterceptor { chain ->
+                val apiKey = prefs.apiKey
                 val request = chain.request().newBuilder().apply {
                     if (!apiKey.isNullOrBlank()) {
                         addHeader("Authorization", "Bearer $apiKey")
@@ -46,32 +81,28 @@ object NetworkModule {
                 }.build()
                 chain.proceed(request)
             }
+            // 拦截器3：日志
             .addInterceptor(loggingInterceptor)
-
-            // --- ✨ 添加的超时设置 ✨ ---
-            // 连接超时：设置与服务器建立连接的最大时间
+            // 超时设置
             .connectTimeout(20, TimeUnit.SECONDS)
-            // 读取超时：成功连接后，等待服务器返回数据的最大时间。这是解决您问题的关键！
             .readTimeout(600, TimeUnit.SECONDS)
-            // 写入超时：向服务器发送数据的最大时间
             .writeTimeout(20, TimeUnit.SECONDS)
-            // --- ✨ 设置结束 ✨ ---
-
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient, prefs: AppPreferences): Retrofit {
-        val baseUrl = prefs.baseUrl
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        // BaseUrl 仍然是一个占位符
+        val placeholderBaseUrl = "http://localhost/"
+
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl(placeholderBaseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
-    // ... (provideModelService 和 provideChatService 保持不变)
     @Provides
     @Singleton
     fun provideModelService(retrofit: Retrofit): ModelService {

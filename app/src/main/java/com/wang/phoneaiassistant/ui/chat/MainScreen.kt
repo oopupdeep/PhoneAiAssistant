@@ -16,14 +16,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wang.phoneaiassistant.data.network.entity.Message
 import com.wang.phoneaiassistant.data.network.entity.ModelInfo
 import com.wang.phoneaiassistant.ui.ShimmerText
+
+
 // ✨ 确保导入你的新主题 ✨
 import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -36,9 +42,67 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
     val messages = viewModel.messages
     val input by viewModel.inputText
     val selectedModel by viewModel.selectedModel
+    val selectedCompany by viewModel.selectedCompany
+    var prevCompany = selectedCompany
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    val companyToSet by viewModel.showApiInputDialogForCompany.observeAsState()
+    var tempApiKey by remember { mutableStateOf("") }
+
+    if (companyToSet != false) {
+        val companyName = selectedCompany
+        AlertDialog(
+            onDismissRequest = {
+                // 当用户点击对话框外部或返回键时调用
+                // 通知 ViewModel 对话框已被关闭
+                viewModel.onApiKeyDialogDismissed(prevCompany)
+            },
+            title = {
+                Text(text = "设置 API Key")
+            },
+            text = {
+                Column {
+                    Text(text = "请先为 $companyName 设置 API Key:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempApiKey,
+                        onValueChange = { tempApiKey = it },
+                        label = { Text("API Key") },
+                        placeholder = { Text("在此输入您的Key") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // 用户点击“确定”
+                        // 通知 ViewModel 保存 API Key
+                        viewModel.onApiKeySubmitted(companyName, tempApiKey)
+                        prevCompany = companyName
+                    },
+                    // 只有当输入框不为空时，确定按钮才可用
+                    enabled = tempApiKey.isNotBlank()
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        // 用户点击“取消”
+                        // 通知 ViewModel 对话框已被关闭
+                        viewModel.onApiKeyDialogDismissed(prevCompany)
+                    }
+                ) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(messages.size, messages.lastOrNull()?.content) {
         if (messages.isNotEmpty()) {
@@ -55,12 +119,15 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            "模型：${selectedModel.id}",
-                            style = MaterialTheme.typography.titleMedium,
-                            // ✨ 使用主题中的主要文字颜色 ✨
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        DropdownMenuButtonCompanies (selectedCompany) {
+                            viewModel.onCompanySelected(it)
+                        }
+//                        Text(
+//                            "公司：${selectedModel.id}",
+//                            style = MaterialTheme.typography.titleMedium,
+//                            // ✨ 使用主题中的主要文字颜色 ✨
+//                            color = MaterialTheme.colorScheme.onBackground
+//                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         DropdownMenuButton(selectedModel) {
                             viewModel.onModelSelected(it)
@@ -159,16 +226,16 @@ fun MessageBubble(message: Message) {
     // ✨ 5. 聊天气泡颜色更新：语义化配色 ✨
     // 用户的消息使用醒目的主题色（光棱蓝），AI 的消息使用柔和的表面色（淡云灰）
     // 这比之前的 primaryContainer/secondaryContainer 对比更强烈，更具“科技感”
-//    val bubbleColor =
-//        if (isUser) MaterialTheme.colorScheme.primary
-//        else MaterialTheme.colorScheme.surface
-    val bubbleColor = MaterialTheme.colorScheme.surface
+    val bubbleColor =
+        if (isUser) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.surface
+//    val bubbleColor = MaterialTheme.colorScheme.surface
     // ✨ 6. 聊天气泡文字颜色更新：保证对比度 ✨
     // 根据气泡背景色，自动选择最合适的文字颜色（蓝底白字，灰底黑字）
-//    val textColor =
-//        if (isUser) MaterialTheme.colorScheme.onPrimary
-//        else MaterialTheme.colorScheme.onSurface
-    val textColor = MaterialTheme.colorScheme.onSurface
+    val textColor =
+        if (isUser) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSurface
+//    val textColor = MaterialTheme.colorScheme.onSurface
     val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
     val bubbleShape = if (isUser) {
         MaterialTheme.shapes.medium.copy(bottomEnd = MaterialTheme.shapes.small.bottomStart)
@@ -218,6 +285,72 @@ fun MessageBubble(message: Message) {
 }
 
 @Composable
+fun DropdownMenuButtonCompanies(
+    currentCompany: String,
+    viewModel: ChatViewModel = viewModel(),
+    onCompanySelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val companies by viewModel.companies.observeAsState(initial = emptyList())
+    var buttonWidth by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadModels()
+        viewModel.loadCompanies()
+    }
+
+    Box {
+        // ✨ 下拉按钮样式会由主题自动适配，无需修改 ✨
+        Button(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            elevation = null,
+            modifier = Modifier.onSizeChanged {
+                // 获取按钮宽度，用于设置给菜单
+                buttonWidth = with(density) { it.width.toDp() }
+            }
+        ) {
+            Text(currentCompany, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = "切换公司"
+            )
+        }
+
+        // ✨ 下拉菜单背景会自动使用 Surface 颜色，无需修改 ✨
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .width(buttonWidth) // ✨ 1. 设置宽度与按钮一致
+                .background(
+                    color = Color.White, // ✨ 2. 自定义背景颜色
+                    shape = RoundedCornerShape(8.dp) // ✨ 3. 设置圆角
+                )
+                .border( // ✨ 4. 添加边框
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(8.dp)
+                )
+        ) {
+            companies.forEach { company ->
+                DropdownMenuItem(
+                    text = { Text(company) },
+                    onClick = {
+                        onCompanySelected(company)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun DropdownMenuButton(
     currentModel: ModelInfo,
     viewModel: ChatViewModel = viewModel(),
@@ -225,6 +358,8 @@ fun DropdownMenuButton(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val models by viewModel.models.observeAsState(initial = emptyList())
+    var buttonWidth by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
 
     LaunchedEffect(Unit) {
         viewModel.loadModels()
@@ -232,16 +367,40 @@ fun DropdownMenuButton(
 
     Box {
         // ✨ 下拉按钮样式会由主题自动适配，无需修改 ✨
-        OutlinedButton(
-            onClick = { expanded = true }
+        Button(
+            onClick = { expanded = true },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            elevation = null,
+            modifier = Modifier.onSizeChanged {
+                // 获取按钮宽度，用于设置给菜单
+                buttonWidth = with(density) { it.width.toDp() }
+            }
         ) {
-            Text(currentModel.id)
+            Text(currentModel.id, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = "切换模型"
+            )
         }
 
         // ✨ 下拉菜单背景会自动使用 Surface 颜色，无需修改 ✨
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .width(buttonWidth) // ✨ 1. 设置宽度与按钮一致
+                .background(
+                    color = Color.White, // ✨ 2. 自定义背景颜色
+                    shape = RoundedCornerShape(8.dp) // ✨ 3. 设置圆角
+                )
+                .border( // ✨ 4. 添加边框
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(8.dp)
+                )
         ) {
             models.forEach { model ->
                 DropdownMenuItem(

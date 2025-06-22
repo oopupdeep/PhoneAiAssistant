@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.wang.phoneaiassistant.data.Authenticate.Companies
 import com.wang.phoneaiassistant.data.network.ChatService
 import com.wang.phoneaiassistant.data.network.entity.ChatRequest
 import com.wang.phoneaiassistant.data.network.entity.Message
@@ -20,12 +21,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.wang.phoneaiassistant.data.Authenticate.CompanyManager
 
 @HiltViewModel
 class ChatViewModel@Inject constructor(
     private val modelRepository: ModelRepository,
     private val chatRepository: ChatRepository,
-    private val chatService: ChatService
+    private val companyManager: CompanyManager
 ) : ViewModel() {
 
     // messages, inputText, selectedModel, models等状态保持不变
@@ -42,8 +44,18 @@ class ChatViewModel@Inject constructor(
     )
         private set
 
+    var selectedCompany = mutableStateOf(
+        Companies.DEEPSEEK
+    )
+
     private val _models = MutableLiveData<List<ModelInfo>>(emptyList())
     val models: LiveData<List<ModelInfo>> = _models
+
+    private val _companies = MutableLiveData<List<String>>(emptyList())
+    val companies: LiveData<List<String>> = _companies
+
+    private val _showApiInputDialogForCompany = MutableLiveData<Boolean?>(false)
+    val showApiInputDialogForCompany: LiveData<Boolean?> = _showApiInputDialogForCompany
 
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -58,11 +70,21 @@ class ChatViewModel@Inject constructor(
         const val LOADING_MESSAGE_CONTENT = "正在努力获取信息..."
     }
 
-//    private val _models = MutableLiveData<List<ModelInfo>>()
-//    val models: LiveData<List<ModelInfo>> get() = _models
-
-//    val service = RetrofitProvider.getService(this, ModelService::class.java)
-//    val modelRepository = ModelRepository(service)
+    fun loadCompanies() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val companyList = companyManager.getCompanyNames()
+                _companies.value = companyList
+            } catch (e: Exception) {
+                _error.value = "Failed to load companies: ${e.message}"
+                _companies.value = emptyList()
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 
     fun loadModels() {
         viewModelScope.launch {
@@ -74,6 +96,9 @@ class ChatViewModel@Inject constructor(
             try {
                 val modelList = modelRepository.getAvailableModels()
                 _models.value = modelList
+                if (modelList.isNotEmpty()) {
+                    selectedModel.value = modelList.first()
+                }
             } catch (e: Exception) {
                 _error.value = "Failed to load models: ${e.message}"
                 _models.value = emptyList()
@@ -91,6 +116,54 @@ class ChatViewModel@Inject constructor(
         selectedModel.value = model
     }
 
+    fun onCompanySelected(company: String) {
+        val preCompany = selectedCompany.value
+        selectedCompany.value = company
+        val apiKey = companyManager.getApiKey(company)
+        if (apiKey.isNullOrEmpty()) {
+            // 发出弹窗请求
+            _showApiInputDialogForCompany.value = true
+        } else {
+            _showApiInputDialogForCompany.value = false
+            // 设置公司
+            companyManager.setCompany(company)
+            loadModels()
+        }
+    }
+
+    fun onApiKeySubmitted(company: String, apiKey: String) {
+        // 在这里实现你的业务逻辑，例如：
+        // 1. 验证 key 的格式 (可选)
+        // 2. 将 company 和 apiKey 保存到 SharedPreferences 或数据库
+         viewModelScope.launch {
+             companyManager.saveApiKey(company, apiKey)
+         }
+        Log.i("ChatViewModel","API Key for $company submitted: $apiKey") // 示例打印
+
+        // 3. 关闭对话框
+        _showApiInputDialogForCompany.value = false
+        companyManager.setCompany(company)
+        loadModels()
+    }
+
+    /**
+     * 当用户点击 "取消" 或对话框外部时，由UI层调用
+     */
+    fun onApiKeyDialogDismissed(prevCompany: String) {
+        // 关闭对话框，将 LiveData 的值设为 null
+        _showApiInputDialogForCompany.value = false
+        selectedCompany.value = prevCompany
+    }
+
+    /**
+     * 在你需要弹出对话框的地方调用这个方法
+     * 例如，在 sendMessageStream 或 onCompanySelected 方法中检查到没有API Key时
+     */
+//    fun triggerApiKeyDialog(company: String) {
+//        _showApiInputDialogForCompany.value = company
+//    }
+
+
     fun sendMessage() {
         viewModelScope.launch {
             val text = inputText.value.trim()
@@ -101,10 +174,6 @@ class ChatViewModel@Inject constructor(
             val chatMessage = ChatRequest(selectedModel.value.id, messages, false)
             val chatResponse = chatRepository.getChat(chatMessage)
             messages.add(Message("system", chatResponse.choices?.get(0)?.message?.content ?: "null"))
-
-            //        // 模拟助手回复
-            //        val reply = "（${selectedModel.value.id} 回复）这是回复内容。"
-            //        messages.add(Message("assistant", reply))
 
             // 清空输入框
             inputText.value = ""
