@@ -1,6 +1,6 @@
 package com.wang.phoneaiassistant.data.repository
 
-import com.wang.phoneaiassistant.data.network.entity.ModelInfo
+import com.wang.phoneaiassistant.data.entity.chat.ModelInfo
 import com.wang.phoneaiassistant.data.network.ModelService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

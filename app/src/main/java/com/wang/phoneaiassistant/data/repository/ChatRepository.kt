@@ -2,8 +2,8 @@ package com.wang.phoneaiassistant.data.repository
 
 import android.util.Log
 import com.wang.phoneaiassistant.data.network.ChatService
-import com.wang.phoneaiassistant.data.network.entity.ChatRequest
-import com.wang.phoneaiassistant.data.network.entity.ChatResponse
+import com.wang.phoneaiassistant.data.entity.network.ChatRequest
+import com.wang.phoneaiassistant.data.entity.network.ChatResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

@@ -1,4 +1,4 @@
-package com.wang.phoneaiassistant.data.network.entity
+package com.wang.phoneaiassistant.data.entity.network
 
 /**
  * 用于解析从SSE (Server-Sent Events) 流接收到的JSON数据块的顶层对象。

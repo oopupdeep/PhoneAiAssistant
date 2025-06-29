@@ -1,6 +1,7 @@
-package com.wang.phoneaiassistant.data.network.entity
+package com.wang.phoneaiassistant.data.entity.network
 
 import com.google.gson.annotations.SerializedName
+import com.wang.phoneaiassistant.data.entity.chat.ModelInfo
 
 data class ModelListResponse(
     @SerializedName("object")

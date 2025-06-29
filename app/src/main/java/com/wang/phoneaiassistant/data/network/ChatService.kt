@@ -1,7 +1,7 @@
 package com.wang.phoneaiassistant.data.network
 
-import com.wang.phoneaiassistant.data.network.entity.ChatRequest
-import com.wang.phoneaiassistant.data.network.entity.ChatResponse
+import com.wang.phoneaiassistant.data.entity.network.ChatRequest
+import com.wang.phoneaiassistant.data.entity.network.ChatResponse
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Headers

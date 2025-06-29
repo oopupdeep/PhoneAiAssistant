@@ -4,7 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.wang.phoneaiassistant.data.Authenticate.CompanyManager
-import com.wang.phoneaiassistant.ui.chat.ChatScreen
+//import com.wang.phoneaiassistant.ui.chat.ChatScreen
+import com.wang.phoneaiassistant.ui.chat.ChatScreenNew
 import dagger.hilt.android.AndroidEntryPoint
 import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
 import javax.inject.Inject
@@ -23,7 +24,7 @@ class ChatActivity : ComponentActivity() {
 
         setContent {
             PhoneAiAssistantTheme {
-                ChatScreen()
+                ChatScreenNew()
             }
         }
     }

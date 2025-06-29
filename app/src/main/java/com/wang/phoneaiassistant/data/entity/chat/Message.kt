@@ -1,4 +1,4 @@
-package com.wang.phoneaiassistant.data.network.entity
+package com.wang.phoneaiassistant.data.entity.chat
 
 import java.util.UUID
 
