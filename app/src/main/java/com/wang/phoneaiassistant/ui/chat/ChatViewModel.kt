@@ -15,6 +15,7 @@ import com.wang.phoneaiassistant.data.entity.chat.ModelInfo
 import com.wang.phoneaiassistant.data.entity.network.StreamResponse
 import com.wang.phoneaiassistant.data.repository.ChatRepository
 import com.wang.phoneaiassistant.data.repository.ModelRepository
+import com.wang.phoneaiassistant.data.repository.ConversationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
@@ -33,7 +34,8 @@ import kotlinx.coroutines.flow.stateIn
 class ChatViewModel@Inject constructor(
     private val modelRepository: ModelRepository,
     private val chatRepository: ChatRepository,
-    private val companyManager: CompanyManager
+    private val companyManager: CompanyManager,
+    private val conversationRepository: ConversationRepository
 ) : ViewModel() {
 
     // inputText, selectedModel, models等状态保持不变
@@ -66,22 +68,18 @@ class ChatViewModel@Inject constructor(
     val error: LiveData<String?> = _error
 
     // 1. 使用 StateFlow 管理所有对话的列表
-    private val _conversations = MutableStateFlow<List<Conversation>>(
-        listOf(Conversation(
-            messages = mutableListOf(Message("system", "我是一名有用的AI助手"))
-        ))
-    )
-    val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
+    val conversations: StateFlow<List<Conversation>> = conversationRepository.getAllConversations()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // 2. 当前正在查看的对话ID
-    private val _currentConversationId = MutableStateFlow(_conversations.value.first().id)
-    val currentConversationId: StateFlow<String> = _currentConversationId.asStateFlow()
+    private val _currentConversationId = MutableStateFlow<String?>(null)
+    val currentConversationId: StateFlow<String?> = _currentConversationId.asStateFlow()
+    
+    // 当前完整的对话（包含消息）
+    private val _currentConversationWithMessages = MutableStateFlow<Conversation?>(null)
+    val currentConversationWithMessages: StateFlow<Conversation?> = _currentConversationWithMessages.asStateFlow()
 
-    val currentConversation: StateFlow<Conversation?> = combine(conversations, currentConversationId) { convos, id ->
-        val result = convos.find { it.id == id }
-        Log.d("ChatViewModel", "currentConversation: looking for id=$id, found=${result != null}, messages count=${result?.messages?.size}")
-        result
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, _conversations.value.firstOrNull())
+    val currentConversation: StateFlow<Conversation?> = currentConversationWithMessages
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -95,16 +93,48 @@ class ChatViewModel@Inject constructor(
                         it.messages.any { msg -> msg.content.contains(query, ignoreCase = true) }
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, _conversations.value)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
 
     // Gson实例用于解析JSON
     private val gson = Gson()
 
+    init {
+        // 初始化时加载或创建第一个对话
+        viewModelScope.launch {
+            Log.d("ChatViewModel", "Init block: Starting to collect conversations")
+            conversations.collect { allConversations ->
+                Log.d("ChatViewModel", "Init block: Got ${allConversations.size} conversations")
+                if (_currentConversationId.value == null) {
+                    if (allConversations.isEmpty()) {
+                        Log.d("ChatViewModel", "Init block: No conversations, creating new one")
+                        // 如果没有对话，创建一个新的
+                        val newConversation = conversationRepository.createConversation()
+                        _currentConversationId.value = newConversation.id
+                        loadConversationMessages(newConversation.id)
+                    } else {
+                        Log.d("ChatViewModel", "Init block: Loading latest conversation")
+                        // 加载最新的对话
+                        val latestConversation = allConversations.first()
+                        _currentConversationId.value = latestConversation.id
+                        loadConversationMessages(latestConversation.id)
+                    }
+                }
+            }
+        }
+    }
+    
     companion object {
         const val LOADING_MESSAGE_CONTENT = "正在努力获取信息..."
     }
 
+    private suspend fun loadConversationMessages(conversationId: String) {
+        Log.d("ChatViewModel", "Loading conversation messages for ID: $conversationId")
+        val conversation = conversationRepository.getConversationWithMessages(conversationId)
+        Log.d("ChatViewModel", "Loaded conversation: ${conversation?.id}, messages: ${conversation?.messages?.size}")
+        _currentConversationWithMessages.value = conversation
+    }
+    
     fun loadCompanies() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -203,161 +233,154 @@ class ChatViewModel@Inject constructor(
         viewModelScope.launch {
             val text = inputText.value.trim()
             if (text.isBlank()) return@launch
-
-            // 获取当前对话索引
-            val currentIndex = _conversations.value.indexOfFirst { it.id == _currentConversationId.value }
-            if (currentIndex == -1) return@launch
             
-            val currentConvo = _conversations.value[currentIndex]
+            val conversationId = _currentConversationId.value ?: return@launch
+            val currentConvo = _currentConversationWithMessages.value ?: return@launch
 
-            // 添加用户消息到当前对话
-            currentConvo.messages.add(Message("user", text))
+            // 保存用户消息到数据库
+            val userMessage = Message("user", text)
+            conversationRepository.saveMessage(conversationId, userMessage)
             
-            // 更新conversations以触发UI更新
-            _conversations.value = _conversations.value.toMutableList().also {
-                it[currentIndex] = currentConvo.copy(messages = currentConvo.messages.toMutableList())
-            }
+            // 更新内存中的对话
+            currentConvo.messages.add(userMessage)
+            _currentConversationWithMessages.value = currentConvo.copy(messages = currentConvo.messages.toMutableList())
             
             // 使用当前对话中的消息进行请求
             val chatMessage = ChatRequest(selectedModel.value.id, currentConvo.messages, false)
             val chatResponse = chatRepository.getChat(chatMessage)
             
-            // 获取最新的对话状态并添加响应
-            val updatedConvo = _conversations.value[currentIndex]
-            updatedConvo.messages.add(Message("system", chatResponse.choices?.get(0)?.message?.content ?: "null"))
-
-            // 再次触发conversations的更新
-            _conversations.value = _conversations.value.toMutableList().also {
-                it[currentIndex] = updatedConvo.copy(messages = updatedConvo.messages.toMutableList())
-            }
+            // 添加AI响应
+            val assistantMessage = Message("assistant", chatResponse.choices?.get(0)?.message?.content ?: "抱歉，获取响应失败")
+            conversationRepository.saveMessage(conversationId, assistantMessage)
+            
+            currentConvo.messages.add(assistantMessage)
+            _currentConversationWithMessages.value = currentConvo.copy(messages = currentConvo.messages.toMutableList())
 
             // 清空输入框
             inputText.value = ""
+            
+            // 如果是第一条消息，生成对话标题
+            if (currentConvo.messages.size <= 3) { // system + user + assistant
+                generateConversationTitle(conversationId, text)
+            }
         }
     }
 
     fun sendMessageStream() {
         val userMessageContent = inputText.value.trim()
         if (userMessageContent.isBlank()) return
-
-        // 获取当前对话索引
-        val currentIndex = _conversations.value.indexOfFirst { it.id == _currentConversationId.value }
-        if (currentIndex == -1) return
         
-        // 1. 创建新的消息列表并添加用户消息
-        val updatedMessages = _conversations.value[currentIndex].messages.toMutableList()
-        updatedMessages.add(Message("user", userMessageContent))
-        Log.d("ChatViewModel", "Added user message, messages count=${updatedMessages.size}")
+        val conversationId = _currentConversationId.value ?: return
+        val currentConvo = _currentConversationWithMessages.value ?: return
         
-        // 创建新的对话对象和conversations列表以触发StateFlow更新
-        val updatedConversation = _conversations.value[currentIndex].copy(messages = updatedMessages)
-        _conversations.value = _conversations.value.toMutableList().apply {
-            this[currentIndex] = updatedConversation
-        }
-        Log.d("ChatViewModel", "Updated conversations, current convo id=${updatedConversation.id}")
-
-        // 准备一个包含历史消息的列表副本用于请求
-        val messagesForRequest = updatedMessages.toList()
-
-        // 2. 创建一个 stream = true 的请求
-        val chatRequest = ChatRequest(
-            model = selectedModel.value.id,
-            messages = messagesForRequest,
-            stream = true // <--- 关键：开启流式输出
-        )
-
+        Log.d("ChatViewModel", "sendMessageStream called with message: $userMessageContent")
+        Log.d("ChatViewModel", "Current conversation ID: $conversationId")
+        Log.d("ChatViewModel", "Current conversation messages count: ${currentConvo.messages.size}")
+        
         // 清空输入框
         inputText.value = ""
-
+        
         viewModelScope.launch {
-            // 3. 立即为AI的回复添加一个空的占位消息
-            val messagesWithLoading = _conversations.value[currentIndex].messages.toMutableList()
-            messagesWithLoading.add(Message(role = "assistant", content = LOADING_MESSAGE_CONTENT))
+            // 1. 保存用户消息到数据库
+            val userMessage = Message("user", userMessageContent)
+            conversationRepository.saveMessage(conversationId, userMessage)
             
-            // 触发conversations的更新
-            val conversationWithLoading = _conversations.value[currentIndex].copy(messages = messagesWithLoading)
-            _conversations.value = _conversations.value.toMutableList().apply {
-                this[currentIndex] = conversationWithLoading
-            }
+            // 2. 更新内存中的对话
+            val updatedMessages = currentConvo.messages.toMutableList()
+            updatedMessages.add(userMessage)
+            val updatedConvo = currentConvo.copy(messages = updatedMessages)
+            _currentConversationWithMessages.value = updatedConvo
+            Log.d("ChatViewModel", "Added user message, total messages: ${updatedMessages.size}")
+            Log.d("ChatViewModel", "Updated _currentConversationWithMessages, id: ${updatedConvo.id}")
             
-            // 新增一个标志位，用于判断是否是第一个数据块
+            // 3. 创建 AI 响应的占位消息
+            val assistantMessage = Message("assistant", LOADING_MESSAGE_CONTENT)
+            val messagesWithLoading = updatedConvo.messages.toMutableList()
+            messagesWithLoading.add(assistantMessage)
+            val convoWithLoading = updatedConvo.copy(messages = messagesWithLoading)
+            _currentConversationWithMessages.value = convoWithLoading
+            Log.d("ChatViewModel", "Added loading message, total messages: ${messagesWithLoading.size}")
+            
+            // 4. 创建聊天请求
+            val chatRequest = ChatRequest(
+                model = selectedModel.value.id,
+                messages = messagesWithLoading.toList(),
+                stream = true
+            )
+            
             var isFirstChunk = true
-
+            val accumulatedContent = StringBuilder()
+            
             try {
-                // 4. 调用仓库的流式方法并收集数据
                 chatRepository.getChatStream(chatRequest)
                     .catch { e ->
-                        // 处理流本身的异常
-                        val errorMessages = _conversations.value[currentIndex].messages.toMutableList()
-                        val lastMessageIndex = errorMessages.lastIndex
-                        errorMessages[lastMessageIndex] = errorMessages[lastMessageIndex].copy(content = "Error: ${e.message}")
-                        
-                        val errorConversation = _conversations.value[currentIndex].copy(messages = errorMessages)
-                        _conversations.value = _conversations.value.toMutableList().apply {
-                            this[currentIndex] = errorConversation
-                        }
+                        // 处理流错误
+                        val currentMessages = _currentConversationWithMessages.value?.messages?.toMutableList() ?: return@catch
+                        val lastIndex = currentMessages.lastIndex
+                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = "Error: ${e.message}")
+                        _currentConversationWithMessages.value = _currentConversationWithMessages.value?.copy(messages = currentMessages)
                     }
                     .collect { chunk ->
-                        // chunk 的格式通常是 "data: {...}"
                         if (chunk.startsWith("data: ")) {
                             val jsonString = chunk.substring(6).trim()
                             if (jsonString == "[DONE]") {
-                                // 流结束的标志
+                                // 流结束，保存最终的助手消息到数据库
+                                val finalMessage = Message("assistant", accumulatedContent.toString())
+                                conversationRepository.saveMessage(conversationId, finalMessage)
+                                
+                                // 如果是第一条消息，生成对话标题
+                                val currentMsgCount = _currentConversationWithMessages.value?.messages?.size ?: 0
+                                if (currentMsgCount <= 3) { // system + user + assistant
+                                    generateConversationTitle(conversationId, userMessageContent)
+                                }
                                 return@collect
                             }
-
+                            
                             try {
                                 val streamResponse = gson.fromJson(jsonString, StreamResponse::class.java)
                                 val deltaContent = streamResponse.choices.firstOrNull()?.delta?.content ?: ""
-
+                                
                                 if (deltaContent.isNotEmpty()) {
-                                    // 获取最新的消息列表
-                                    val updatedMessages = _conversations.value[currentIndex].messages.toMutableList()
-                                    val lastMessageIndex = updatedMessages.lastIndex
-                                    val currentMessage = updatedMessages[lastMessageIndex]
+                                    accumulatedContent.append(deltaContent)
                                     
-                                    // 创建一个新消息对象来触发UI更新
-                                    val updatedMessage: Message
+                                    val currentMessages = _currentConversationWithMessages.value?.messages?.toMutableList() ?: return@collect
+                                    val lastIndex = currentMessages.lastIndex
+                                    
                                     if (isFirstChunk) {
-                                        // 如果是第一个数据块，则直接替换内容
-                                        updatedMessage = currentMessage.copy(content = deltaContent)
-                                        // 将标志位设为 false，这样后续的数据块就会走 else 分支
+                                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = deltaContent)
                                         isFirstChunk = false
                                     } else {
-                                        // 如果不是第一个数据块，则在现有内容后追加
-                                        updatedMessage = currentMessage.copy(content = currentMessage.content + deltaContent)
+                                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(
+                                            content = currentMessages[lastIndex].content + deltaContent
+                                        )
                                     }
-                                    updatedMessages[lastMessageIndex] = updatedMessage
                                     
-                                    // 触发conversations的更新
-                                    val updatedConversation = _conversations.value[currentIndex].copy(messages = updatedMessages)
-                                    _conversations.value = _conversations.value.toMutableList().apply {
-                                        this[currentIndex] = updatedConversation
-                                    }
+                                    _currentConversationWithMessages.value = _currentConversationWithMessages.value?.copy(messages = currentMessages)
                                     delay(50L)
                                 }
                             } catch (e: Exception) {
-                                // 忽略无法解析的行
-                                println("Could not parse stream chunk: $jsonString")
+                                Log.e("ChatViewModel", "Error parsing stream chunk", e)
                             }
                         }
                     }
             } catch (e: Exception) {
-                // 处理发起请求时的顶层异常
-                val failedMessages = _conversations.value[currentIndex].messages.toMutableList()
-                val lastMessageIndex = failedMessages.lastIndex
-                failedMessages[lastMessageIndex] = failedMessages[lastMessageIndex].copy(content = "Request failed: ${e.message}")
+                // 处理请求错误
+                val currentMessages = _currentConversationWithMessages.value?.messages?.toMutableList() ?: return@launch
+                val lastIndex = currentMessages.lastIndex
+                currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = "Request failed: ${e.message}")
+                _currentConversationWithMessages.value = _currentConversationWithMessages.value?.copy(messages = currentMessages)
                 
-                val failedConversation = _conversations.value[currentIndex].copy(messages = failedMessages)
-                _conversations.value = _conversations.value.toMutableList().apply {
-                    this[currentIndex] = failedConversation
-                }
+                // 保存错误消息到数据库
+                conversationRepository.saveMessage(conversationId, currentMessages[lastIndex])
             }
         }
     }
 
     fun switchChat(conversationId: String) {
         _currentConversationId.value = conversationId
+        viewModelScope.launch {
+            loadConversationMessages(conversationId)
+        }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -365,10 +388,53 @@ class ChatViewModel@Inject constructor(
     }
 
     fun createNewChat() {
-        val newConversation = Conversation(
-            messages = mutableListOf(Message("system", "我是一名有用的AI助手"))
-        )
-        _conversations.value = listOf(newConversation) + _conversations.value // 添加到列表顶部
-        _currentConversationId.value = newConversation.id // 切换到新对话
+        viewModelScope.launch {
+            val newConversation = conversationRepository.createConversation()
+            _currentConversationId.value = newConversation.id
+            loadConversationMessages(newConversation.id)
+        }
+    }
+    
+    private fun generateConversationTitle(conversationId: String, firstUserMessage: String) {
+        viewModelScope.launch {
+            try {
+                // 使用AI生成对话标题
+                val titlePrompt = """
+                    请为以下对话生成一个简短的标题（不超过20个字）：
+                    用户：$firstUserMessage
+                    
+                    要求：
+                    1. 标题应该概括对话的主题
+                    2. 使用简洁的语言
+                    3. 只返回标题文本，不要有额外的说明
+                """.trimIndent()
+                
+                val titleRequest = ChatRequest(
+                    model = selectedModel.value.id,
+                    messages = listOf(Message("user", titlePrompt)),
+                    stream = false
+                )
+                
+                val response = chatRepository.getChat(titleRequest)
+                val generatedTitle = response.choices?.firstOrNull()?.message?.content?.trim() ?: firstUserMessage.take(30)
+                
+                // 确保标题不会太长
+                val finalTitle = if (generatedTitle.length > 30) {
+                    generatedTitle.substring(0, 30) + "..."
+                } else {
+                    generatedTitle
+                }
+                
+                conversationRepository.updateConversationTitle(conversationId, finalTitle)
+            } catch (e: Exception) {
+                // 如果生成失败，使用简单的截断方式
+                val fallbackTitle = if (firstUserMessage.length > 30) {
+                    firstUserMessage.substring(0, 30) + "..."
+                } else {
+                    firstUserMessage
+                }
+                conversationRepository.updateConversationTitle(conversationId, fallbackTitle)
+            }
+        }
     }
 }

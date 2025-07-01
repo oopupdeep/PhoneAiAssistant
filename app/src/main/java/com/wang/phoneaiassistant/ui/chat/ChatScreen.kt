@@ -7,7 +7,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.wang.phoneaiassistant.ui.chat.components.ChatInputBar
 import com.wang.phoneaiassistant.ui.chat.components.ChatTopAppBar
 import com.wang.phoneaiassistant.ui.chat.components.MessageList
@@ -19,7 +19,7 @@ import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreenNew(viewModel: ChatViewModel = viewModel()) {
+fun ChatScreenNew(viewModel: ChatViewModel = hiltViewModel()) {
     // --- 状态管理 ---
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -27,6 +27,10 @@ fun ChatScreenNew(viewModel: ChatViewModel = viewModel()) {
     // 从 ViewModel 中获取多对话相关状态
     val currentConversation by viewModel.currentConversation.collectAsState()
     val inputText by viewModel.inputText
+    
+    LaunchedEffect(currentConversation) {
+        Log.d("ChatScreenNew", "currentConversation changed: ${currentConversation?.id}, messages: ${currentConversation?.messages?.size}")
+    }
 
     // --- API Key 对话框所需的状态 ---
     val companyToSet by viewModel.showApiInputDialogForCompany.observeAsState()
@@ -128,6 +132,9 @@ fun ChatScreenNew(viewModel: ChatViewModel = viewModel()) {
             currentConversation?.let { conversation ->
                 LaunchedEffect(conversation.messages.size) {
                     Log.d("ChatScreenNew", "Rendering messages, count=${conversation.messages.size}")
+                    conversation.messages.forEachIndexed { index, message ->
+                        Log.d("ChatScreenNew", "Message $index: role=${message.role}, content=${message.content.take(50)}")
+                    }
                 }
                 MessageList(
                     messages = conversation.messages,

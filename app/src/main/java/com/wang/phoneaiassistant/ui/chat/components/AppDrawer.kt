@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.wang.phoneaiassistant.ui.chat.ChatViewModel
 
 @Composable
@@ -23,7 +23,7 @@ fun AppDrawer(
     onConversationClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     // 从 ViewModel 中收集状态
     val conversations by viewModel.filteredConversations.collectAsState()

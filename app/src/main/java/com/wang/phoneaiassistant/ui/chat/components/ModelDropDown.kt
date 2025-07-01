@@ -16,14 +16,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.wang.phoneaiassistant.ui.chat.ChatViewModel
 
 
 @Composable
 fun ModelDropdowns(
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     val selectedModel by viewModel.selectedModel
     val models by viewModel.models.observeAsState(initial = emptyList())
