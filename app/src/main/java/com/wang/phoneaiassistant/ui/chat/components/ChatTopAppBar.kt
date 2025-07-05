@@ -3,6 +3,7 @@ package com.wang.phoneaiassistant.ui.chat.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
@@ -13,6 +14,7 @@ import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
 fun ChatTopAppBar(
     onNavigationIconClick: () -> Unit,
     onNewChatClick: () -> Unit,
+    onWebModeClick: () -> Unit,
     modelSelectionContent: @Composable () -> Unit
 ) {
     TopAppBar(
@@ -32,6 +34,12 @@ fun ChatTopAppBar(
         },
         // 需求 2: 右侧新建对话图标
         actions = {
+            IconButton(onClick = onWebModeClick) {
+                Icon(
+                    imageVector = Icons.Default.Public,
+                    contentDescription = "Web"
+                )
+            }
             IconButton(onClick = onNewChatClick) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -49,6 +57,7 @@ fun ChatTopAppBarPreview() {
         ChatTopAppBar(
             onNavigationIconClick = {},
             onNewChatClick = {},
+            onWebModeClick = {},
             modelSelectionContent = { Text("模型选择区域") }
         )
     }

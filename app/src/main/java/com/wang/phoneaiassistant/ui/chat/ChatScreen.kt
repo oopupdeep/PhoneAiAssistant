@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -16,6 +17,7 @@ import com.wang.phoneaiassistant.ui.chat.components.AppDrawer
 import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
 import kotlinx.coroutines.launch
 import android.util.Log
+import android.content.Intent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +25,7 @@ fun ChatScreenNew(viewModel: ChatViewModel = hiltViewModel()) {
     // --- 状态管理 ---
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // 从 ViewModel 中获取多对话相关状态
     val currentConversation by viewModel.currentConversation.collectAsState()
@@ -113,6 +116,11 @@ fun ChatScreenNew(viewModel: ChatViewModel = hiltViewModel()) {
                         viewModel.createNewChat()
                         // 如果抽屉是打开的，创建一个新对话后将其关闭
                         scope.launch { drawerState.close() }
+                    },
+                    onWebModeClick = {
+                        context.startActivity(
+                            android.content.Intent(context, com.wang.phoneaiassistant.ui.activities.WebChatActivity::class.java)
+                        )
                     },
                     modelSelectionContent = {
                         // 将重构后的模型选择下拉菜单放置在这里

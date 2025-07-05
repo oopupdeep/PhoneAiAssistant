@@ -24,6 +24,9 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".ui.activities.WebChatActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
