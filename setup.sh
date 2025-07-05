@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -e
 export ANDROID_SDK_ROOT="$HOME/android-sdk"
 PROJECT_DIR="$(pwd)"
