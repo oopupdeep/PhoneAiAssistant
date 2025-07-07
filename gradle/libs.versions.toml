@@ -49,6 +49,9 @@ javapoet = "1.13.0"
 
 compose-markdown="0.5.5"
 
+# --- 图片加载 ---
+coil = "2.6.0"
+
 [libraries]
 squareup-javapoet = { group = "com.squareup", name = "javapoet", version.ref = "javapoet" }
 
@@ -103,6 +106,9 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "compose-markdown" }
+
+# --- 图片加载 ---
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 [bundles]
 # 将常用的Compose UI库捆绑在一起，方便在 build.gradle.kts 中调用

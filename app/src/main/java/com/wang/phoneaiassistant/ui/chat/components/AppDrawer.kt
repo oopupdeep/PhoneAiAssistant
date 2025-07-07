@@ -31,6 +31,7 @@ fun AppDrawer(
     // 从 ViewModel 中收集状态
     val conversations by viewModel.filteredConversations.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val currentConversationId by viewModel.currentConversationId.collectAsState()
 
     ModalDrawerSheet(modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -63,7 +64,7 @@ fun AppDrawer(
                                 overflow = TextOverflow.Ellipsis
                             )
                         },
-                        selected = false, // 可以根据当前对话ID来高亮
+                        selected = conversation.id == currentConversationId,
                         onClick = { 
                             onConversationClick?.invoke(conversation.id)
                             onCloseDrawer()

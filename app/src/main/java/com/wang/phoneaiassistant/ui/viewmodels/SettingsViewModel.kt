@@ -5,18 +5,25 @@ import androidx.lifecycle.viewModelScope
 import com.wang.phoneaiassistant.data.ChatMode
 import com.wang.phoneaiassistant.data.ChatModeManager
 import com.wang.phoneaiassistant.data.Authenticate.CompanyManager
+import com.wang.phoneaiassistant.data.preferences.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val chatModeManager: ChatModeManager,
-    private val companyManager: CompanyManager
+    private val companyManager: CompanyManager,
+    private val appPreferences: AppPreferences
 ) : ViewModel() {
     
     val currentMode: StateFlow<ChatMode> = chatModeManager.currentMode
+    
+    private val _backgroundUri = MutableStateFlow(appPreferences.chatBackgroundUri)
+    val backgroundUri: StateFlow<String?> = _backgroundUri.asStateFlow()
     
     fun getCompanyNames(): List<String> {
         return companyManager.getCompanyNames()
@@ -64,5 +71,12 @@ class SettingsViewModel @Inject constructor(
     
     fun setWebViewProvider(provider: String) {
         chatModeManager.setWebViewProvider(provider)
+    }
+    
+    fun updateBackgroundUri(uri: String?) {
+        viewModelScope.launch {
+            appPreferences.chatBackgroundUri = uri
+            _backgroundUri.value = uri
+        }
     }
 }

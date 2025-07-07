@@ -1,18 +1,29 @@
 package com.wang.phoneaiassistant.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
 import com.wang.phoneaiassistant.data.ChatMode
 import com.wang.phoneaiassistant.ui.viewmodels.SettingsViewModel
 
@@ -217,6 +228,100 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+            
+            // 聊天背景设置（仅API模式显示）
+            if (currentMode == ChatMode.API) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "聊天背景",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        
+                        val backgroundUri by viewModel.backgroundUri.collectAsStateWithLifecycle()
+                        val context = LocalContext.current
+                        
+                        val imagePicker = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.GetContent()
+                        ) { uri: Uri? ->
+                            uri?.let {
+                                // 获取持久化的URI权限
+                                context.contentResolver.takePersistableUriPermission(
+                                    it,
+                                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                )
+                                viewModel.updateBackgroundUri(it.toString())
+                            }
+                        }
+                        
+                        // 背景预览和选择按钮
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 背景预览
+                            Box(
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { imagePicker.launch("image/*") },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (backgroundUri != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(model = backgroundUri),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Wallpaper,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            // 操作按钮
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { imagePicker.launch("image/*") }
+                                ) {
+                                    Text("选择背景图片")
+                                }
+                                
+                                if (backgroundUri != null) {
+                                    TextButton(
+                                        onClick = { viewModel.updateBackgroundUri(null) },
+                                        colors = ButtonDefaults.textButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.error
+                                        )
+                                    ) {
+                                        Text("移除背景")
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Text(
+                            text = "从相册选择一张图片作为聊天背景",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

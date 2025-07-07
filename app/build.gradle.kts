@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.compose.markdown)
+    implementation(libs.coil.compose)
     kapt(libs.hilt.compiler)
     
     // Room Database

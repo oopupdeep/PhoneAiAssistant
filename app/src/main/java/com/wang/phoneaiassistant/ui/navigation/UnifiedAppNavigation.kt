@@ -4,9 +4,11 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.wang.phoneaiassistant.ui.chat.ChatViewModel
 import com.wang.phoneaiassistant.ui.chat.components.AppDrawer
 import com.wang.phoneaiassistant.ui.screens.SettingsScreen
 import com.wang.phoneaiassistant.ui.screens.UnifiedChatScreen
@@ -22,6 +24,7 @@ fun UnifiedAppNavigation() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val chatViewModel: ChatViewModel = hiltViewModel()
     
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -39,11 +42,13 @@ fun UnifiedAppNavigation() {
                     }
                 },
                 onConversationClick = { conversationId ->
-                    // 处理会话点击
+                    // 切换到选中的对话
+                    chatViewModel.switchChat(conversationId)
                     coroutineScope.launch {
                         drawerState.close()
                     }
-                }
+                },
+                viewModel = chatViewModel
             )
         }
     ) {
@@ -60,7 +65,8 @@ fun UnifiedAppNavigation() {
                         coroutineScope.launch {
                             drawerState.open()
                         }
-                    }
+                    },
+                    chatViewModel = chatViewModel
                 )
             }
             

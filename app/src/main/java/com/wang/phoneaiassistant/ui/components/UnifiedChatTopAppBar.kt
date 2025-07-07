@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,20 +59,6 @@ fun ChatTopAppBar(
             }
         },
         actions = {
-            // 模式切换按钮
-            IconButton(onClick = {
-                val newMode = when (currentMode) {
-                    ChatMode.API -> ChatMode.WEBVIEW
-                    ChatMode.WEBVIEW -> ChatMode.API
-                }
-                onModeSwitch(newMode)
-            }) {
-                Icon(
-                    imageVector = Icons.Default.SwapHoriz,
-                    contentDescription = "切换模式"
-                )
-            }
-            
             // 新对话按钮
             IconButton(onClick = onNewChatClick) {
                 Icon(

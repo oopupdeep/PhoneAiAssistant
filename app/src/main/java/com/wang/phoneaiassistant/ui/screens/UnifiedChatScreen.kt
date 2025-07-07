@@ -39,9 +39,19 @@ fun UnifiedChatScreen(
 ) {
     val currentMode by unifiedViewModel.currentMode.collectAsStateWithLifecycle()
     val showPasteKeyDialog by unifiedViewModel.showPasteKeyDialog.collectAsStateWithLifecycle()
+    val currentBackgroundUri by unifiedViewModel.currentBackgroundUri.collectAsStateWithLifecycle()
     
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
     val inputText by chatViewModel.inputText
+    
+    // 调试日志
+    LaunchedEffect(messages) {
+        android.util.Log.d("UnifiedChatScreen", "Messages collected: ${messages.size}")
+    }
+    
+    LaunchedEffect(currentBackgroundUri) {
+        android.util.Log.d("UnifiedChatScreen", "Background URI: $currentBackgroundUri")
+    }
     
     val webViewProgress by webViewViewModel.loadingProgress.collectAsStateWithLifecycle()
     val webViewError by webViewViewModel.error.collectAsStateWithLifecycle()
@@ -131,6 +141,7 @@ fun UnifiedChatScreen(
                             // API模式：本地渲染消息
                             MessageList(
                                 messages = messages,
+                                backgroundUri = currentBackgroundUri,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -167,9 +178,7 @@ fun UnifiedChatScreen(
                 onInputChange = { chatViewModel.updateInputText(it) },
                 onSendClick = {
                     if (currentMode == ChatMode.API) {
-                        coroutineScope.launch {
-                            chatViewModel.sendMessage()
-                        }
+                        chatViewModel.sendMessageStream()
                     }
                     // WebView模式下输入框仅作装饰，实际输入在网页内
                 },
