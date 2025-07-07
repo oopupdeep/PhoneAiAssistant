@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,8 +21,10 @@ import com.wang.phoneaiassistant.ui.chat.ChatViewModel
 
 @Composable
 fun AppDrawer(
-    onConversationClick: (String) -> Unit,
-    onSettingsClick: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onCloseDrawer: () -> Unit,
+    onConversationClick: ((String) -> Unit)? = null,
+    onAiChatClick: ((com.wang.phoneaiassistant.ui.screens.AiChatService) -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
@@ -61,7 +64,10 @@ fun AppDrawer(
                             )
                         },
                         selected = false, // 可以根据当前对话ID来高亮
-                        onClick = { onConversationClick(conversation.id) },
+                        onClick = { 
+                            onConversationClick?.invoke(conversation.id)
+                            onCloseDrawer()
+                        },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                 }
@@ -69,12 +75,33 @@ fun AppDrawer(
 
             HorizontalDivider()
 
+            // AI 聊天服务按钮
+            if (onAiChatClick != null) {
+                NavigationDrawerItem(
+                    label = { Text("DeepSeek Chat") },
+                    icon = { Icon(Icons.Default.Language, contentDescription = "DeepSeek") },
+                    selected = false,
+                    onClick = { onAiChatClick(com.wang.phoneaiassistant.ui.screens.AiChatService.DEEPSEEK) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                
+                NavigationDrawerItem(
+                    label = { Text("通义千问") },
+                    icon = { Icon(Icons.Default.Language, contentDescription = "通义千问") },
+                    selected = false,
+                    onClick = { onAiChatClick(com.wang.phoneaiassistant.ui.screens.AiChatService.QWEN) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                
+                HorizontalDivider()
+            }
+
             // 底部设置按钮 (需求 5)
             NavigationDrawerItem(
                 label = { Text("设置") },
                 icon = { Icon(Icons.Default.Settings, contentDescription = "设置") },
                 selected = false,
-                onClick = onSettingsClick,
+                onClick = onNavigateToSettings,
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }

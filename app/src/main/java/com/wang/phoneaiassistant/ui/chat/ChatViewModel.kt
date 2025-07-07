@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 
 @HiltViewModel
 class ChatViewModel@Inject constructor(
@@ -63,6 +64,10 @@ class ChatViewModel@Inject constructor(
 
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
+    
+    // 添加StateFlow版本供Compose使用
+    private val _isLoadingState = MutableStateFlow(false)
+    val isLoadingState: StateFlow<Boolean> = _isLoadingState.asStateFlow()
 
     private val _error = MutableLiveData<String?>(null)
     val error: LiveData<String?> = _error
@@ -80,6 +85,11 @@ class ChatViewModel@Inject constructor(
     val currentConversationWithMessages: StateFlow<Conversation?> = _currentConversationWithMessages.asStateFlow()
 
     val currentConversation: StateFlow<Conversation?> = currentConversationWithMessages
+    
+    // 提供消息列表的StateFlow
+    val messages: StateFlow<List<Message>> = currentConversationWithMessages
+        .map { conversation -> conversation?.messages ?: emptyList() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -231,11 +241,16 @@ class ChatViewModel@Inject constructor(
 
     fun sendMessage() {
         viewModelScope.launch {
+            sendMessageSuspend()
+        }
+    }
+    
+    private suspend fun sendMessageSuspend() {
             val text = inputText.value.trim()
-            if (text.isBlank()) return@launch
+            if (text.isBlank()) return
             
-            val conversationId = _currentConversationId.value ?: return@launch
-            val currentConvo = _currentConversationWithMessages.value ?: return@launch
+            val conversationId = _currentConversationId.value ?: return
+            val currentConvo = _currentConversationWithMessages.value ?: return
 
             // 保存用户消息到数据库
             val userMessage = Message("user", text)
@@ -263,7 +278,6 @@ class ChatViewModel@Inject constructor(
             if (currentConvo.messages.size <= 3) { // system + user + assistant
                 generateConversationTitle(conversationId, text)
             }
-        }
     }
 
     fun sendMessageStream() {
@@ -294,6 +308,7 @@ class ChatViewModel@Inject constructor(
             Log.d("ChatViewModel", "Updated _currentConversationWithMessages, id: ${updatedConvo.id}")
             
             // 3. 创建 AI 响应的占位消息
+            _isLoadingState.value = true
             val assistantMessage = Message("assistant", LOADING_MESSAGE_CONTENT)
             val messagesWithLoading = updatedConvo.messages.toMutableList()
             messagesWithLoading.add(assistantMessage)
@@ -315,6 +330,7 @@ class ChatViewModel@Inject constructor(
                 chatRepository.getChatStream(chatRequest)
                     .catch { e ->
                         // 处理流错误
+                        _isLoadingState.value = false
                         val currentMessages = _currentConversationWithMessages.value?.messages?.toMutableList() ?: return@catch
                         val lastIndex = currentMessages.lastIndex
                         currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = "Error: ${e.message}")
@@ -325,6 +341,7 @@ class ChatViewModel@Inject constructor(
                             val jsonString = chunk.substring(6).trim()
                             if (jsonString == "[DONE]") {
                                 // 流结束，保存最终的助手消息到数据库
+                                _isLoadingState.value = false
                                 val finalMessage = Message("assistant", accumulatedContent.toString())
                                 conversationRepository.saveMessage(conversationId, finalMessage)
                                 
@@ -365,6 +382,7 @@ class ChatViewModel@Inject constructor(
                     }
             } catch (e: Exception) {
                 // 处理请求错误
+                _isLoadingState.value = false
                 val currentMessages = _currentConversationWithMessages.value?.messages?.toMutableList() ?: return@launch
                 val lastIndex = currentMessages.lastIndex
                 currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = "Request failed: ${e.message}")
@@ -393,6 +411,33 @@ class ChatViewModel@Inject constructor(
             _currentConversationId.value = newConversation.id
             loadConversationMessages(newConversation.id)
         }
+    }
+    
+    fun saveApiKey(apiKey: String) {
+        viewModelScope.launch {
+            val currentCompany = selectedCompany.value
+            companyManager.saveApiKey(currentCompany, apiKey)
+            companyManager.setCompany(currentCompany)
+            loadModels()
+        }
+    }
+    
+    fun clearMessages() {
+        val conversationId = _currentConversationId.value ?: return
+        val currentConvo = _currentConversationWithMessages.value ?: return
+        
+        viewModelScope.launch {
+            // 清空当前对话的消息
+            currentConvo.messages.clear()
+            _currentConversationWithMessages.value = currentConvo.copy(messages = mutableListOf())
+            
+            // 可以选择创建新对话或保持当前对话
+            createNewChat()
+        }
+    }
+    
+    fun updateInputText(text: String) {
+        inputText.value = text
     }
     
     private fun generateConversationTitle(conversationId: String, firstUserMessage: String) {

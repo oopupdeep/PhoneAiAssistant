@@ -30,6 +30,9 @@ compose-bom = "2024.06.00"
 hilt = "2.51.1" # Dagger Hilt
 hilt-androidx-compiler = "1.2.0" # AndroidX Hilt 编译器
 
+# --- Navigation ---
+navigation = "2.7.7"
+
 # --- 网络 ---
 retrofit = "2.11.0" # 升级到较新的稳定版
 okhttp = "4.12.0"
@@ -63,6 +66,7 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # --- Lifecycle & Activity (与Compose集成) ---
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
@@ -77,6 +81,9 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 # 推荐添加 Hilt 与 Compose 的集成库
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-androidx-compiler" }
+
+# --- Navigation ---
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
 # --- 网络 ---
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }

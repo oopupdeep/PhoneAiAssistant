@@ -98,6 +98,12 @@ dependencies {
 
     // Tooling（用于预览和调试）
     debugImplementation(libs.androidx.compose.ui.tooling)
+    
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+    
+    // Material Icons Extended
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // 测试相关
     testImplementation(libs.junit)

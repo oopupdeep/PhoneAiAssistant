@@ -8,6 +8,7 @@ import com.wang.phoneaiassistant.data.Authenticate.CompanyManager
 import com.wang.phoneaiassistant.ui.chat.ChatScreenNew
 import dagger.hilt.android.AndroidEntryPoint
 import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
+import com.wang.phoneaiassistant.ui.navigation.UnifiedAppNavigation
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -24,7 +25,7 @@ class ChatActivity : ComponentActivity() {
 
         setContent {
             PhoneAiAssistantTheme {
-                ChatScreenNew()
+                UnifiedAppNavigation()
             }
         }
     }

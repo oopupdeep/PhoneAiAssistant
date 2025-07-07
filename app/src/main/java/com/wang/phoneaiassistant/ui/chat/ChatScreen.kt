@@ -19,7 +19,10 @@ import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreenNew(viewModel: ChatViewModel = hiltViewModel()) {
+fun ChatScreenNew(
+    viewModel: ChatViewModel = hiltViewModel(),
+    onNavigateToAiChat: ((com.wang.phoneaiassistant.ui.screens.AiChatService) -> Unit)? = null
+) {
     // --- 状态管理 ---
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -92,13 +95,22 @@ fun ChatScreenNew(viewModel: ChatViewModel = hiltViewModel()) {
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
+                onNavigateToSettings = {
+                    // TODO: 在这里实现导航到设置页面的逻辑
+                    scope.launch { drawerState.close() }
+                },
+                onCloseDrawer = {
+                    scope.launch { drawerState.close() }
+                },
                 onConversationClick = { conversationId ->
                     viewModel.switchChat(conversationId)
                     scope.launch { drawerState.close() }
                 },
-                onSettingsClick = {
-                    // TODO: 在这里实现导航到设置页面的逻辑
-                    scope.launch { drawerState.close() }
+                onAiChatClick = onNavigateToAiChat?.let { navigate ->
+                    { service ->
+                        navigate(service)
+                        scope.launch { drawerState.close() }
+                    }
                 }
             )
         }
