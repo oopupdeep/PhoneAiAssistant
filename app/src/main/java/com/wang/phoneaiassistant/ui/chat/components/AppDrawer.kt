@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,7 +57,13 @@ fun AppDrawer(
                     .fillMaxWidth()
             ) {
                 items(conversations, key = { it.id }) { conversation ->
-                    NavigationDrawerItem(
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(NavigationDrawerItemDefaults.ItemPadding),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        NavigationDrawerItem(
                         label = {
                             Text(
                                 text = conversation.title,
@@ -69,8 +76,21 @@ fun AppDrawer(
                             onConversationClick?.invoke(conversation.id)
                             onCloseDrawer()
                         },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
+                        modifier = Modifier.weight(1f)
+                        )
+                        
+                        IconButton(
+                            onClick = {
+                                viewModel.deleteConversation(conversation.id)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "删除对话",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
             }
 

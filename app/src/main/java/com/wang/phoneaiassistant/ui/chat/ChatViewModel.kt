@@ -530,4 +530,38 @@ class ChatViewModel@Inject constructor(
             }
         }
     }
+    
+    fun switchToConversation(conversationId: String) {
+        viewModelScope.launch {
+            _currentConversationId.value = conversationId
+            loadConversationMessages(conversationId)
+        }
+    }
+    
+    fun createNewConversation() {
+        viewModelScope.launch {
+            val newConversation = conversationRepository.createConversation()
+            _currentConversationId.value = newConversation.id
+            loadConversationMessages(newConversation.id)
+        }
+    }
+    
+    fun deleteConversation(conversationId: String) {
+        viewModelScope.launch {
+            // 删除对话
+            conversationRepository.deleteConversation(conversationId)
+            
+            // 如果删除的是当前对话，需要切换到其他对话或创建新对话
+            if (_currentConversationId.value == conversationId) {
+                val remainingConversations = conversations.value.filter { it.id != conversationId }
+                if (remainingConversations.isNotEmpty()) {
+                    // 切换到第一个剩余的对话
+                    switchToConversation(remainingConversations.first().id)
+                } else {
+                    // 创建新对话
+                    createNewConversation()
+                }
+            }
+        }
+    }
 }
