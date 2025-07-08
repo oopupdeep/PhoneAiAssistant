@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="256dp"
+    android:height="256dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- 黑色背景 -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M0,0h1024v1024h-1024z" />
+
+    <!-- 白色对话气泡主体 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M200,250
+                          h640
+                          a60,60 0 0 1 60,60
+                          v280
+                          a60,60 0 0 1 -60,60
+                          h-450
+                          v70
+                          l-70,-70
+                          h-120
+                          a60,60 0 0 1 -60,-60
+                          v-280
+                          a60,60 0 0 1 60,-60
+                          z" />
+
+    <!-- AI 三节点图形 -->
+    <!-- 节点圆 -->
+    <path android:fillColor="#000000" android:pathData="M260,430a40,40 0 1,0 80,0a40,40 0 1,0 -80,0" />
+    <path android:fillColor="#000000" android:pathData="M460,430a40,40 0 1,0 80,0a40,40 0 1,0 -80,0" />
+    <path android:fillColor="#000000" android:pathData="M360,570a40,40 0 1,0 80,0a40,40 0 1,0 -80,0" />
+
+    <!-- 连线 -->
+    <path android:strokeColor="#000000" android:strokeWidth="20"
+        android:strokeLineCap="round"
+        android:pathData="M300,430L400,570" />
+    <path android:strokeColor="#000000" android:strokeWidth="20"
+        android:strokeLineCap="round"
+        android:pathData="M500,430L400,570" />
+    <path android:strokeColor="#000000" android:strokeWidth="20"
+        android:strokeLineCap="round"
+        android:pathData="M300,430L500,430" />
+
+</vector>

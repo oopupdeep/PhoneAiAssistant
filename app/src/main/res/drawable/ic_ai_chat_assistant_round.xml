@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 圆形背景 -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,0A54,54 0 1,0 54,108A54,54 0 1,0 54,0Z" />
+
+    <!-- 聊天气泡 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,34c0,-5 4,-9 9,-9h30c5,0 9,4 9,9v22c0,5 -4,9 -9,9H45l-9,9v-9h-6c-5,0 -9,-4 -9,-9V34z" />
+
+    <!-- 闪电（AI感） -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,40l-6,15h6v9l6,-15h-6z" />
+</vector>
