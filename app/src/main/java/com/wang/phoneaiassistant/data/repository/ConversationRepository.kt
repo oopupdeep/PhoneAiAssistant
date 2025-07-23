@@ -8,7 +8,9 @@ import com.wang.phoneaiassistant.data.entity.chat.Conversation
 import com.wang.phoneaiassistant.data.entity.chat.Message
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,10 +49,12 @@ class ConversationRepository @Inject constructor(
         )
     }
     
-    suspend fun createConversation(title: String = "新的对话"): Conversation {
+    suspend fun createConversation(title: String? = null): Conversation {
+        // 如果没有提供标题，使用默认标题
+        val defaultTitle = title ?: "新的对话"
         val conversation = Conversation(
             id = UUID.randomUUID().toString(),
-            title = title,
+            title = defaultTitle,
             messages = mutableListOf(Message("system", "我是一名有用的AI助手"))
         )
         
@@ -78,9 +82,9 @@ class ConversationRepository @Inject constructor(
         return conversation
     }
     
-    suspend fun saveMessage(conversationId: String, message: Message) {
+    suspend fun saveMessage(conversationId: String, message: Message): Message {
         val messageEntity = MessageEntity(
-            id = UUID.randomUUID().toString(),
+            id = message.id, // 使用传入的 message 的 ID，而不是生成新的
             conversationId = conversationId,
             role = message.role,
             content = message.content,
@@ -95,6 +99,9 @@ class ConversationRepository @Inject constructor(
             conversationDao.getConversationById(conversationId)?.title ?: "新的对话",
             Date()
         )
+        
+        // 返回带有实际保存 ID 的消息
+        return message
     }
     
     suspend fun updateConversationTitle(conversationId: String, newTitle: String) {

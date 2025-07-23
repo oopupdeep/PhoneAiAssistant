@@ -6,8 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,8 +24,15 @@ fun ChatInputBar(
     input: String,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    contextMemoryEnabled: Boolean = true,
+    onContextMemoryToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    
+    // 添加调试日志
+    println("ChatInputBar recompose: contextMemoryEnabled=$contextMemoryEnabled")
+    
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -44,6 +55,24 @@ fun ChatInputBar(
             )
         )
         Spacer(modifier = Modifier.width(8.dp))
+        // 上下文记忆开关按钮
+        IconButton(
+            onClick = {
+                println("ChatInputBar: Context memory toggle clicked, current state: $contextMemoryEnabled")
+                Toast.makeText(context, 
+                    if (contextMemoryEnabled) "关闭上下文记忆" else "开启上下文记忆", 
+                    Toast.LENGTH_SHORT
+                ).show()
+                onContextMemoryToggle()
+            }
+        ) {
+            Icon(
+                imageVector = if (contextMemoryEnabled) Icons.Filled.Psychology else Icons.Outlined.Psychology,
+                contentDescription = if (contextMemoryEnabled) "关闭上下文记忆" else "开启上下文记忆",
+                tint = if (contextMemoryEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
         IconButton(
             onClick = onSendClick,
             enabled = input.isNotBlank()
@@ -61,6 +90,12 @@ fun ChatInputBar(
 @Composable
 fun ChatInputBarPreview() {
     PhoneAiAssistantTheme {
-        ChatInputBar(input = "这是一个例子", onInputChange = {}, onSendClick = {})
+        ChatInputBar(
+            input = "这是一个例子", 
+            onInputChange = {}, 
+            onSendClick = {},
+            contextMemoryEnabled = true,
+            onContextMemoryToggle = {}
+        )
     }
 }

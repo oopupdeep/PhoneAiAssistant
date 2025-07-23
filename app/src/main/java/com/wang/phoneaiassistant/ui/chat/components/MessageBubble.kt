@@ -1,6 +1,10 @@
 package com.wang.phoneaiassistant.ui.chat.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -19,7 +23,11 @@ import dev.jeziellago.compose.markdowntext.MarkdownText
 import java.util.UUID
 
 @Composable
-fun MessageBubble(message: Message) {
+fun MessageBubble(
+    message: Message,
+    isStreaming: Boolean = false,
+    onCancelStream: (() -> Unit)? = null
+) {
     val isUser = message.role == "user"
 
     // ✨ 5. 聊天气泡颜色更新：语义化配色 ✨
@@ -58,11 +66,47 @@ fun MessageBubble(message: Message) {
             val isLoading =
                 (message.content == ChatViewModel.LOADING_MESSAGE_CONTENT && message.role == "assistant")
 
-            if (isLoading) {
-                ShimmerText(
-                    text = message.content,
-                    modifier = Modifier.padding(12.dp)
-                )
+            if (isLoading || isStreaming) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isLoading) {
+                        ShimmerText(
+                            text = message.content,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        MarkdownText(
+                            modifier = Modifier.weight(1f),
+                            markdown = message.content,
+                            style = TextStyle(
+                                color = textColor,
+                                fontSize = 16.sp,
+                                lineHeight = 22.sp,
+                                textAlign = TextAlign.Start
+                            ),
+                            onLinkClicked = { link ->
+                                println("Link clicked: $link")
+                            }
+                        )
+                    }
+                    
+                    // 终止按钮
+                    if (onCancelStream != null) {
+                        IconButton(
+                            onClick = onCancelStream,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "终止生成",
+                                tint = textColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             } else {
                 MarkdownText(
                     modifier = Modifier.padding(12.dp),
@@ -93,7 +137,9 @@ fun MessageBubblePreview() {
                     id = UUID.randomUUID().toString(),
                     role = "user",
                     content = "你好，AI。这是一个用户的消息。"
-                )
+                ),
+                isStreaming = false,
+                onCancelStream = null
             )
             Spacer(Modifier.height(8.dp))
             MessageBubble(
@@ -101,7 +147,19 @@ fun MessageBubblePreview() {
                     id = UUID.randomUUID().toString(),
                     role = "assistant",
                     content = "你好！这是一个来自AI的回复。我能为你做些什么呢？"
-                )
+                ),
+                isStreaming = false,
+                onCancelStream = null
+            )
+            Spacer(Modifier.height(8.dp))
+            MessageBubble(
+                message = Message(
+                    id = UUID.randomUUID().toString(),
+                    role = "assistant",
+                    content = "这是一个正在生成的回复..."
+                ),
+                isStreaming = true,
+                onCancelStream = { println("取消流式输出") }
             )
         }
     }

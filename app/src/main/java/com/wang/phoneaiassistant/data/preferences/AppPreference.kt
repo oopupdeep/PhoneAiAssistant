@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
-class AppPreferences(context: Context) {
+class AppPreference(context: Context) {
 
     val prefs: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
@@ -21,4 +21,8 @@ class AppPreferences(context: Context) {
     var chatBackgroundUri: String?
         get() = prefs.getString("chat_background_uri", null)
         set(value) = prefs.edit { putString("chat_background_uri", value) }
+    
+    var contextMemoryEnabled: Boolean
+        get() = prefs.getBoolean("context_memory_enabled", true)
+        set(value) = prefs.edit { putBoolean("context_memory_enabled", value) }
 }

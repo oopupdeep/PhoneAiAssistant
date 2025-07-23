@@ -13,4 +13,14 @@ class Converters {
     fun dateToTimestamp(date: Date?): Long? {
         return date?.time
     }
+    
+    @TypeConverter
+    fun fromFloatArray(value: FloatArray?): String? {
+        return value?.joinToString(",")
+    }
+    
+    @TypeConverter
+    fun stringToFloatArray(value: String?): FloatArray? {
+        return value?.split(",")?.map { it.toFloat() }?.toFloatArray()
+    }
 }

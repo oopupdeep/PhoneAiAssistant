@@ -1,7 +1,7 @@
 package com.wang.phoneaiassistant.data.Authenticate
 
 import android.content.Context
-import com.wang.phoneaiassistant.data.preferences.AppPreferences
+import com.wang.phoneaiassistant.data.preferences.AppPreference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,7 +10,7 @@ import javax.inject.Singleton
 @Singleton
 class CompanyManager @Inject constructor(
     @ApplicationContext context: Context,
-    private val appPreferences: AppPreferences
+    private val appPreferences: AppPreference
 ) {
     private val apiPrefs = context.getSharedPreferences("company_api_keys", Context.MODE_PRIVATE)
     private val urlPrefs = context.getSharedPreferences("company_base_urls", Context.MODE_PRIVATE)
@@ -29,7 +29,7 @@ class CompanyManager @Inject constructor(
     fun initDefaults() {
         saveUrl("DeepSeek", "https://api.deepseek.com/v1/")
         saveUrl("Qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-        saveApiKey("DeepSeek", appPreferences.defaultApiKey)
+//        saveApiKey("DeepSeek", appPreferences.defaultApiKey)
         setCompany("DeepSeek")
     }
 

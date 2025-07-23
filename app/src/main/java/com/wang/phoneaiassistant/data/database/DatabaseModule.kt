@@ -27,4 +27,9 @@ object DatabaseModule {
     fun provideMessageDao(database: AppDatabase): MessageDao {
         return database.messageDao()
     }
+    
+    @Provides
+    fun provideMessageEmbeddingDao(database: AppDatabase): MessageEmbeddingDao {
+        return database.messageEmbeddingDao()
+    }
 }

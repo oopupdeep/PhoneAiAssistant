@@ -105,9 +105,14 @@ dependencies {
     
     // Material Icons Extended
     implementation(libs.androidx.compose.material.icons.extended)
+    
+    // Vector Embeddings
+    implementation(libs.commons.math)
 
     // 测试相关
     testImplementation(libs.junit)
+    testImplementation("org.mockito:mockito-core:5.3.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

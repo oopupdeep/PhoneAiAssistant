@@ -52,6 +52,10 @@ compose-markdown="0.5.5"
 # --- 图片加载 ---
 coil = "2.6.0"
 
+# --- 向量嵌入 ---
+tensorflow-lite = "2.14.0"
+commons-math = "3.6.1"
+
 [libraries]
 squareup-javapoet = { group = "com.squareup", name = "javapoet", version.ref = "javapoet" }
 
@@ -109,6 +113,11 @@ compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown",
 
 # --- 图片加载 ---
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+
+# --- 向量嵌入 ---
+tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflow-lite" }
+tensorflow-lite-support = { module = "org.tensorflow:tensorflow-lite-support", version.ref = "tensorflow-lite" }
+commons-math = { module = "org.apache.commons:commons-math3", version.ref = "commons-math" }
 
 [bundles]
 # 将常用的Compose UI库捆绑在一起，方便在 build.gradle.kts 中调用

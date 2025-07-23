@@ -54,7 +54,16 @@ PhoneAiAssistant 是一个基于现代 Android 开发技术栈构建的 AI 聊�
 - **Companies.kt**: 定义支持的 AI 服务提供商枚举
 - **CompanyManager.kt**: 管理不同 AI 服务的配置和 API 密钥
 
-#### 1.2 数据库 - `/database/`
+#### 1.2 上下文记忆 - `/agent/`
+- **ContextMemoryAgent.kt**: 核心上下文记忆管理器
+  - 处理消息嵌入生成
+  - 执行相似度检索
+  - 增强用户提示词
+- **ContextMemoryService.kt**: ChromaDB 服务接口
+  - 定义向量数据库操作
+  - 管理嵌入存储和检索
+
+#### 1.3 数据库 - `/database/`
 - **AppDatabase.kt**: Room 数据库主类，管理数据库实例
 - **ConversationDao.kt**: 对话数据访问对象，提供对话的 CRUD 操作
 - **MessageDao.kt**: 消息数据访问对象，提供消息的 CRUD 操作
@@ -63,7 +72,7 @@ PhoneAiAssistant 是一个基于现代 Android 开发技术栈构建的 AI 聊�
 - **Converters.kt**: Room 类型转换器，处理复杂类型存储
 - **DatabaseModule.kt**: Hilt 模块，提供数据库相关依赖
 
-#### 1.3 实体类 - `/entity/`
+#### 1.4 实体类 - `/entity/`
 - **/chat/**
   - **Conversation.kt**: 对话领域模型
   - **Message.kt**: 消息领域模型
@@ -73,15 +82,15 @@ PhoneAiAssistant 是一个基于现代 Android 开发技术栈构建的 AI 聊�
   - **ChatResponse.kt**: 聊天响应数据传输对象
   - **StreamResponse.kt**: 流式响应数据传输对象
 
-#### 1.4 网络层 - `/network/`
+#### 1.5 网络层 - `/network/`
 - **ChatService.kt**: 聊天 API 接口定义，支持流式响应
 - **ModelService.kt**: 模型列表 API 接口定义
 - **NetworkModule.kt**: Hilt 模块，配置 Retrofit 和 OkHttp，支持动态 BaseURL
 
-#### 1.5 偏好设置 - `/preferences/`
+#### 1.6 偏好设置 - `/preferences/`
 - **AppPreferences.kt**: SharedPreferences 封装，管理应用设置
 
-#### 1.6 仓库层 - `/repository/`
+#### 1.7 仓库层 - `/repository/`
 - **ChatRepository.kt**: 处理聊天相关业务逻辑，支持流式响应
 - **ConversationRepository.kt**: 管理对话的创建、更新、删除
 - **ModelRepository.kt**: 管理 AI 模型列表获取
@@ -142,7 +151,19 @@ PhoneAiAssistant 是一个基于现代 Android 开发技术栈构建的 AI 聊�
 7. 保存 AI 响应到数据库
 ```
 
-### 3. 依赖注入流程
+### 3. 上下文记忆流程
+```
+1. 用户发送消息
+2. ContextMemoryAgent.processNewMessage() - 生成消息嵌入
+3. 存储嵌入到 ChromaDB (通过 ContextMemoryService)
+4. 下次对话时：
+   - ContextMemoryAgent.enhancePromptWithContext() 
+   - 检索相关历史消息
+   - 增强用户提示词
+   - 发送给 AI 模型
+```
+
+### 4. 依赖注入流程
 ```
 @HiltAndroidApp → @AndroidEntryPoint → @HiltViewModel → @Inject
      ↓                    ↓                   ↓            ↓
@@ -176,6 +197,13 @@ Application →        Activity →         ViewModel →   Repository
 - Material 3 设计系统
 - 支持深色主题
 
+### 6. 智能上下文记忆
+- **向量嵌入技术**: 使用 ChromaDB 存储消息嵌入
+- **语义检索**: 基于余弦相似度找到相关历史对话
+- **智能增强**: 自动将相关上下文注入到新对话中
+- **可控开关**: 用户可随时开启/关闭上下文记忆功能
+- **跨对话记忆**: 支持在不同对话间共享相关知识
+
 ## 开发指南
 
 ### 添加新的 AI 服务提供商
@@ -189,6 +217,12 @@ Application →        Activity →         ViewModel →   Repository
 2. 在 ViewModel 中暴露状态和方法
 3. 在 UI 层创建或修改 Composable 函数
 4. 更新导航图（如需要）
+
+### 配置上下文记忆服务
+1. 确保 ChromaDB 服务正在运行（默认端口 8000）
+2. 在 `ContextMemoryModule.kt` 中配置服务地址
+3. 使用 `ContextMemoryAgent` 处理消息嵌入
+4. 通过 UI 开关控制功能启用状态
 
 ### 数据库迁移
 1. 修改实体类

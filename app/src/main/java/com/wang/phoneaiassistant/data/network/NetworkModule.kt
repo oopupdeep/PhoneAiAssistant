@@ -1,7 +1,7 @@
 package com.wang.phoneaiassistant.data.network
 
 import android.content.Context
-import com.wang.phoneaiassistant.data.preferences.AppPreferences
+import com.wang.phoneaiassistant.data.preferences.AppPreference
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,13 +22,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAppPreferences(@ApplicationContext context: Context): AppPreferences {
-        return AppPreferences(context)
+    fun provideAppPreferences(@ApplicationContext context: Context): AppPreference {
+        return AppPreference(context)
     }
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(prefs: AppPreferences): OkHttpClient {
+    fun provideOkHttpClient(prefs: AppPreference): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY

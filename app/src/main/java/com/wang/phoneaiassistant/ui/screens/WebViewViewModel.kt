@@ -3,6 +3,7 @@ package com.wang.phoneaiassistant.ui.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,16 @@ class WebViewViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(error = error)
             _error.value = error
+            
+            // 如果是连接错误，5秒后自动清除
+            if (error != null && (error.contains("ERR_CONNECTION_REFUSED") || 
+                error.contains("ERR_INTERNET_DISCONNECTED") ||
+                error.contains("ERR_NAME_NOT_RESOLVED"))) {
+                delay(5000)
+                if (_error.value == error) {
+                    clearError()
+                }
+            }
         }
     }
     
@@ -46,11 +57,18 @@ class WebViewViewModel @Inject constructor() : ViewModel() {
     }
     
     fun reload() {
-        // 重置状态以触发WebView重新加载
+        // 清除错误并触发重新加载
         viewModelScope.launch {
-            _uiState.value = WebViewUiState()
-            _loadingProgress.value = 0
             _error.value = null
+            _uiState.value = _uiState.value.copy(error = null)
+            _loadingProgress.value = 0
+        }
+    }
+    
+    fun clearError() {
+        viewModelScope.launch {
+            _error.value = null
+            _uiState.value = _uiState.value.copy(error = null)
         }
     }
 }

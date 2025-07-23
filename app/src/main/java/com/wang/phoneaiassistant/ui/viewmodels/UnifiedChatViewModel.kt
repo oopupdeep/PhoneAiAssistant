@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wang.phoneaiassistant.data.ChatMode
 import com.wang.phoneaiassistant.data.ChatModeManager
-import com.wang.phoneaiassistant.data.preferences.AppPreferences
+import com.wang.phoneaiassistant.data.preferences.AppPreference
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class UnifiedChatViewModel @Inject constructor(
     private val chatModeManager: ChatModeManager,
-    private val appPreferences: AppPreferences
+    private val appPreferences: AppPreference
 ) : ViewModel() {
     
     val currentMode: StateFlow<ChatMode> = chatModeManager.currentMode

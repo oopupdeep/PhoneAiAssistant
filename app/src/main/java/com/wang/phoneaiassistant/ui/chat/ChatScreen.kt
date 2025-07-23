@@ -30,10 +30,19 @@ fun ChatScreenNew(
     // 从 ViewModel 中获取多对话相关状态
     val currentConversation by viewModel.currentConversation.collectAsState()
     val inputText by viewModel.inputText
+    val contextMemoryEnabledState = viewModel.contextMemoryEnabled.collectAsState()
+    val contextMemoryEnabled = contextMemoryEnabledState.value
     
     LaunchedEffect(currentConversation) {
         Log.d("ChatScreenNew", "currentConversation changed: ${currentConversation?.id}, messages: ${currentConversation?.messages?.size}")
     }
+    
+    LaunchedEffect(contextMemoryEnabled) {
+        Log.d("ChatScreenNew", "LaunchedEffect: contextMemoryEnabled changed to: $contextMemoryEnabled")
+    }
+    
+    // 添加更多调试日志
+    Log.d("ChatScreenNew", "ChatScreen recompose: contextMemoryEnabled=$contextMemoryEnabled, StateFlow value=${viewModel.contextMemoryEnabled.value}")
 
     // --- API Key 对话框所需的状态 ---
     val companyToSet by viewModel.showApiInputDialogForCompany.observeAsState()
@@ -136,7 +145,12 @@ fun ChatScreenNew(
                 ChatInputBar(
                     input = inputText,
                     onInputChange = { viewModel.onInputChange(it) },
-                    onSendClick = { viewModel.sendMessageStream() }
+                    onSendClick = { viewModel.sendMessageStream() },
+                    contextMemoryEnabled = contextMemoryEnabled,
+                    onContextMemoryToggle = { 
+                        Log.d("ChatScreenNew", "onContextMemoryToggle called, current value before toggle: $contextMemoryEnabled")
+                        viewModel.toggleContextMemory() 
+                    }
                 )
             }
         ) { innerPadding ->
