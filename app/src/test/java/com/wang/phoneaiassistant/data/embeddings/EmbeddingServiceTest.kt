@@ -187,7 +187,7 @@ class EmbeddingServiceTest {
     
     @Test
     fun `very long text is handled correctly`() = runBlocking {
-        val longText = "This is a very long text. " * 100
+        val longText = "This is a very long text. ".repeat(100)
         val embedding = embeddingService.generateEmbedding(longText)
         
         assertEquals(384, embedding.size)

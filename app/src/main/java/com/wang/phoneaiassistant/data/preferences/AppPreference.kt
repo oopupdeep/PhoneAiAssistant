@@ -16,8 +16,6 @@ class AppPreference(context: Context) {
         get() = prefs.getString("api_key", "") ?: ""
         set(value) = prefs.edit { putString("api_key", value) }
 
-    val defaultApiKey = "sk-668a4b63c3374bfd885bb08b3bc4dbc5"
-
     var chatBackgroundUri: String?
         get() = prefs.getString("chat_background_uri", null)
         set(value) = prefs.edit { putString("chat_background_uri", value) }
