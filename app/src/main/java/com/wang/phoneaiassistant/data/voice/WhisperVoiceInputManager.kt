@@ -161,6 +161,7 @@ class WhisperVoiceInputManager @Inject constructor(
             audioRecord?.stop()
             audioRecord?.release()
             audioRecord = null
+            mWhisper.stop()
 
             // recordingJob will finish copying and start whisper transcription
             _voiceInputState.value = _voiceInputState.value.copy(isListening = false)
