@@ -16,6 +16,13 @@ import com.wang.phoneaiassistant.ui.chat.components.AppDrawer
 import com.wang.phoneaiassistant.ui.theme.PhoneAiAssistantTheme
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +39,30 @@ fun ChatScreenNew(
     val inputText by viewModel.inputText
     val contextMemoryEnabledState = viewModel.contextMemoryEnabled.collectAsState()
     val contextMemoryEnabled = contextMemoryEnabledState.value
+    val voiceInputState by viewModel.voiceInputState.collectAsState()
+    val context = LocalContext.current
+    
+    // 显示语音输入错误
+    LaunchedEffect(voiceInputState.error) {
+        voiceInputState.error?.let { error ->
+            Log.e("ChatScreenNew", "Voice input error: $error")
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    // 权限请求启动器
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                Log.d("ChatScreenNew", "Audio permission granted")
+                viewModel.toggleVoiceInput(context)
+            } else {
+                Log.e("ChatScreenNew", "Audio permission denied")
+                Toast.makeText(context, "需要录音权限才能使用语音输入", Toast.LENGTH_LONG).show()
+            }
+        }
+    )
     
     LaunchedEffect(currentConversation) {
         Log.d("ChatScreenNew", "currentConversation changed: ${currentConversation?.id}, messages: ${currentConversation?.messages?.size}")
@@ -150,6 +181,23 @@ fun ChatScreenNew(
                     onContextMemoryToggle = { 
                         Log.d("ChatScreenNew", "onContextMemoryToggle called, current value before toggle: $contextMemoryEnabled")
                         viewModel.toggleContextMemory() 
+                    },
+                    isListening = voiceInputState.isListening,
+                    onVoiceInputClick = {
+                        Log.d("ChatScreenNew", "Voice input clicked")
+                        when {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED -> {
+                                Log.d("ChatScreenNew", "Permission already granted, starting voice input")
+                                viewModel.toggleVoiceInput(context)
+                            }
+                            else -> {
+                                Log.d("ChatScreenNew", "Requesting audio permission")
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
                     }
                 )
             }

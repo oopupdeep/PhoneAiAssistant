@@ -54,6 +54,7 @@ coil = "2.6.0"
 
 # --- 向量嵌入 ---
 tensorflow-lite = "2.14.0"
+tensorflow-lite-support = "0.4.4"
 commons-math = "3.6.1"
 
 [libraries]
@@ -116,7 +117,7 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 # --- 向量嵌入 ---
 tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflow-lite" }
-tensorflow-lite-support = { module = "org.tensorflow:tensorflow-lite-support", version.ref = "tensorflow-lite" }
+tensorflow-lite-support = { module = "org.tensorflow:tensorflow-lite-support", version.ref = "tensorflow-lite-support" }
 commons-math = { module = "org.apache.commons:commons-math3", version.ref = "commons-math" }
 
 [bundles]

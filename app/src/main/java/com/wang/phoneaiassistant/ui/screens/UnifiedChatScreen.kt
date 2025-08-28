@@ -29,6 +29,12 @@ import com.wang.phoneaiassistant.ui.chat.ChatViewModel
 import com.wang.phoneaiassistant.ui.screens.WebViewViewModel
 import com.wang.phoneaiassistant.ui.viewmodels.UnifiedChatViewModel
 import kotlinx.coroutines.launch
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,37 +48,52 @@ fun UnifiedChatScreen(
     val currentMode by unifiedViewModel.currentMode.collectAsStateWithLifecycle()
     val showPasteKeyDialog by unifiedViewModel.showPasteKeyDialog.collectAsStateWithLifecycle()
     val currentBackgroundUri by unifiedViewModel.currentBackgroundUri.collectAsStateWithLifecycle()
-    
+
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
     val inputText by chatViewModel.inputText
     val contextMemoryEnabled by chatViewModel.contextMemoryEnabled.collectAsStateWithLifecycle()
     val isLoadingState by chatViewModel.isLoadingState.collectAsStateWithLifecycle()
-    
+
     // 调试日志
     LaunchedEffect(messages) {
         android.util.Log.d("UnifiedChatScreen", "Messages collected: ${messages.size}")
     }
-    
+
     LaunchedEffect(currentBackgroundUri) {
         android.util.Log.d("UnifiedChatScreen", "Background URI: $currentBackgroundUri")
     }
-    
+
     val webViewProgress by webViewViewModel.loadingProgress.collectAsStateWithLifecycle()
     val webViewError by webViewViewModel.error.collectAsStateWithLifecycle()
-    
+
     val coroutineScope = rememberCoroutineScope()
-    
+    val context = LocalContext.current
+
+    // 权限请求启动器
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                android.util.Log.d("UnifiedChatScreen", "Audio permission granted")
+                chatViewModel.toggleVoiceInput(context)
+            } else {
+                android.util.Log.e("UnifiedChatScreen", "Audio permission denied")
+                Toast.makeText(context, "需要录音权限才能使用语音输入", Toast.LENGTH_LONG).show()
+            }
+        }
+    )
+
     // WebView 导航状态
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
-    
+
     // 添加切换动画状态
     var isTransitioning by remember { mutableStateOf(false) }
-    
+
     // 记录上一个模式，用于检测模式切换
     var previousMode by remember { mutableStateOf(currentMode) }
-    
+
     LaunchedEffect(currentMode) {
         if (previousMode != currentMode) {
             isTransitioning = true
@@ -81,11 +102,11 @@ fun UnifiedChatScreen(
             isTransitioning = false
         }
     }
-    
+
     // 粘贴API Key对话框
     if (showPasteKeyDialog) {
         PasteApiKeyDialog(
-            onDismiss = { 
+            onDismiss = {
                 unifiedViewModel.dismissPasteKeyDialog()
             },
             onKeyPasted = { apiKey ->
@@ -100,7 +121,7 @@ fun UnifiedChatScreen(
             }
         )
     }
-    
+
     Scaffold(
         topBar = {
             ChatTopAppBar(
@@ -191,7 +212,7 @@ fun UnifiedChatScreen(
                         }
                     }
                 }
-                
+
                 // 切换时的加载指示器
                 if (isTransitioning) {
                     Box(
@@ -204,9 +225,34 @@ fun UnifiedChatScreen(
                     }
                 }
             }
-            
+
             // 输入框（仅在 API 模式下显示）
             if (currentMode == ChatMode.API) {
+                val voiceInputState by chatViewModel.voiceInputState.collectAsStateWithLifecycle()
+
+                // 显示语音输入错误
+                LaunchedEffect(voiceInputState.error) {
+                    voiceInputState.error?.let { error ->
+                        android.util.Log.e("UnifiedChatScreen", "Voice input error: $error")
+                        Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                // local cache to avoid sending same transcription multiple times
+                val lastSentTranscription = remember { mutableStateOf("") }
+
+                // 当收到最终转写文本并且不是正在处理时，自动填入输入框并发送给 chatbot
+                LaunchedEffect(voiceInputState.transcribedText, voiceInputState.isProcessing) {
+                    val finalText = voiceInputState.transcribedText
+                    if (!voiceInputState.isProcessing && finalText.isNotBlank() && finalText != lastSentTranscription.value) {
+                        android.util.Log.d("UnifiedChatScreen", "Auto sending transcribed text: $finalText")
+                        // 更新 ViewModel 的输入文本并发送
+                        chatViewModel.updateInputText(finalText)
+                        chatViewModel.sendMessageStream()
+                        lastSentTranscription.value = finalText
+                    }
+                }
+
                 ChatInputBar(
                     input = inputText,
                     onInputChange = { chatViewModel.updateInputText(it) },
@@ -215,6 +261,23 @@ fun UnifiedChatScreen(
                     },
                     contextMemoryEnabled = contextMemoryEnabled,
                     onContextMemoryToggle = { chatViewModel.toggleContextMemory() },
+                    isListening = voiceInputState.isListening,
+                    onVoiceInputClick = {
+                        android.util.Log.d("UnifiedChatScreen", "Voice input clicked in UnifiedChatScreen")
+                        when {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED -> {
+                                android.util.Log.d("UnifiedChatScreen", "Permission already granted, starting voice input")
+                                chatViewModel.toggleVoiceInput(context)
+                            }
+                            else -> {
+                                android.util.Log.d("UnifiedChatScreen", "Requesting audio permission")
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -229,7 +292,7 @@ fun PasteApiKeyDialog(
     onSkip: () -> Unit
 ) {
     var apiKey by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("设置 API Key") },
@@ -247,7 +310,7 @@ fun PasteApiKeyDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { 
+                onClick = {
                     if (apiKey.isNotBlank()) {
                         onKeyPasted(apiKey)
                     }
@@ -280,14 +343,14 @@ fun WebViewContainer(
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     val uiState by webViewViewModel.uiState.collectAsStateWithLifecycle()
-    
+
     // 监听 reload 信号
     LaunchedEffect(uiState.error) {
         if (uiState.error == null && error == null && webView != null) {
             webView?.reload()
         }
     }
-    
+
     // 处理 WebView 生命周期
     DisposableEffect(Unit) {
         onDispose {
@@ -302,7 +365,7 @@ fun WebViewContainer(
             }
         }
     }
-    
+
     Box(modifier = modifier) {
         AndroidView(
             factory = { context ->
@@ -316,14 +379,14 @@ fun WebViewContainer(
                     settings.useWideViewPort = true
                     settings.loadWithOverviewMode = true
                     settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-                    
+
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             super.onProgressChanged(view, newProgress)
                             onProgressChange(newProgress)
                         }
                     }
-                    
+
                     webViewClient = object : android.webkit.WebViewClient() {
                         override fun onReceivedError(
                             view: WebView?,
@@ -333,7 +396,7 @@ fun WebViewContainer(
                             super.onReceivedError(view, request, error)
                             onError(error?.description?.toString() ?: "加载失败")
                         }
-                        
+
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             // 确保页面加载完成后进度条消失
@@ -343,7 +406,7 @@ fun WebViewContainer(
                                 onNavigationStateChanged(it.canGoBack(), it.canGoForward())
                             }
                         }
-                        
+
                         override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                             super.doUpdateVisitedHistory(view, url, isReload)
                             // 更新导航状态
@@ -352,7 +415,7 @@ fun WebViewContainer(
                             }
                         }
                     }
-                    
+
                     loadUrl(url)
                     webView = this
                     onWebViewCreated(this)
@@ -365,7 +428,7 @@ fun WebViewContainer(
                 }
             }
         )
-        
+
         // 加载进度条
         if (progress < 100) {
             LinearProgressIndicator(
@@ -375,7 +438,7 @@ fun WebViewContainer(
                     .align(Alignment.TopCenter)
             )
         }
-        
+
         // 错误提示
         error?.let {
             Card(

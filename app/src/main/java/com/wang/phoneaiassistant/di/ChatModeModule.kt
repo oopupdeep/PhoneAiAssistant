@@ -2,6 +2,7 @@ package com.wang.phoneaiassistant.di
 
 import android.content.Context
 import com.wang.phoneaiassistant.data.ChatModeManager
+import com.wang.phoneaiassistant.data.voice.VoiceInputManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,5 +21,11 @@ object ChatModeModule {
         companyManager: com.wang.phoneaiassistant.data.Authenticate.CompanyManager
     ): ChatModeManager {
         return ChatModeManager(context, companyManager)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideVoiceInputManager(): VoiceInputManager {
+        return VoiceInputManager()
     }
 }

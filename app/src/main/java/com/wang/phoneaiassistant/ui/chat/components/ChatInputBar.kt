@@ -8,10 +8,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +29,8 @@ fun ChatInputBar(
     onSendClick: () -> Unit,
     contextMemoryEnabled: Boolean = true,
     onContextMemoryToggle: () -> Unit = {},
+    isListening: Boolean = false,
+    onVoiceInputClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -54,6 +59,28 @@ fun ChatInputBar(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
+        Spacer(modifier = Modifier.width(8.dp))
+        // 语音输入按钮
+        IconButton(
+            onClick = {
+                println("ChatInputBar: Voice input button clicked")
+                Toast.makeText(context, "语音输入按钮被点击", Toast.LENGTH_SHORT).show()
+                println("ChatInputBar: About to call onVoiceInputClick")
+                try {
+                    onVoiceInputClick()
+                    println("ChatInputBar: onVoiceInputClick called successfully")
+                } catch (e: Exception) {
+                    println("ChatInputBar: Error calling onVoiceInputClick: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        ) {
+            Icon(
+                imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = if (isListening) "停止录音" else "开始录音",
+                tint = if (isListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Spacer(modifier = Modifier.width(8.dp))
         // 上下文记忆开关按钮
         IconButton(

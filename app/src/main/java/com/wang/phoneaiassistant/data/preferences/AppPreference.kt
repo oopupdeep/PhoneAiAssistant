@@ -23,4 +23,12 @@ class AppPreference(context: Context) {
     var contextMemoryEnabled: Boolean
         get() = prefs.getBoolean("context_memory_enabled", true)
         set(value) = prefs.edit { putBoolean("context_memory_enabled", value) }
+    
+    var xfAppId: String
+        get() = prefs.getString("xf_app_id", "") ?: ""
+        set(value) = prefs.edit { putString("xf_app_id", value) }
+    
+    var voiceProvider: String
+        get() = prefs.getString("voice_provider", "whisper") ?: "whisper"
+        set(value) = prefs.edit { putString("voice_provider", value) }
 }

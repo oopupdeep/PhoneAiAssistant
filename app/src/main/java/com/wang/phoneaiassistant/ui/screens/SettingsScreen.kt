@@ -325,6 +325,143 @@ fun SettingsScreen(
                     }
                 }
             }
+            
+            // 语音识别设置
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "语音识别设置",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    
+                    // 语音识别提供商选择
+                    var voiceProvider by remember { mutableStateOf(viewModel.getVoiceProvider()) }
+                    
+                    Text(
+                        text = "语音识别服务",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = voiceProvider == "google",
+                            onClick = { 
+                                voiceProvider = "google"
+                                viewModel.setVoiceProvider("google")
+                            },
+                            label = { Text("Google") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        FilterChip(
+                            selected = voiceProvider == "xunfei",
+                            onClick = { 
+                                voiceProvider = "xunfei"
+                                viewModel.setVoiceProvider("xunfei")
+                            },
+                            label = { Text("讯飞") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
+                    // 讯飞AppId配置
+                    if (voiceProvider == "xunfei") {
+                        var xfAppId by remember { mutableStateOf(viewModel.getXfAppId()) }
+                        var showXfAppIdDialog by remember { mutableStateOf(false) }
+                        
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "讯飞 AppId",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    
+                                    TextButton(
+                                        onClick = { showXfAppIdDialog = true }
+                                    ) {
+                                        Text(if (xfAppId.isEmpty()) "点击设置" else "修改")
+                                    }
+                                }
+                                
+                                if (xfAppId.isNotEmpty()) {
+                                    Text(
+                                        text = "已配置: ${xfAppId.take(10)}...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // 讯飞AppId输入对话框
+                        if (showXfAppIdDialog) {
+                            var tempXfAppId by remember { mutableStateOf(xfAppId) }
+                            
+                            AlertDialog(
+                                onDismissRequest = { showXfAppIdDialog = false },
+                                title = { Text("设置讯飞 AppId") },
+                                text = {
+                                    Column {
+                                        Text(
+                                            "请输入您的讯飞 AppId",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = tempXfAppId,
+                                            onValueChange = { tempXfAppId = it },
+                                            label = { Text("AppId") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            xfAppId = tempXfAppId
+                                            viewModel.setXfAppId(tempXfAppId)
+                                            showXfAppIdDialog = false
+                                        }
+                                    ) {
+                                        Text("确定")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(
+                                        onClick = { showXfAppIdDialog = false }
+                                    ) {
+                                        Text("取消")
+                                    }
+                                }
+                            )
+                        }
+                        
+                        Text(
+                            text = "访问讯飞开放平台获取AppId: www.xfyun.cn",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
     

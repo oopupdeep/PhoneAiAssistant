@@ -79,4 +79,24 @@ class SettingsViewModel @Inject constructor(
             _backgroundUri.value = uri
         }
     }
+    
+    fun getXfAppId(): String {
+        return appPreferences.xfAppId
+    }
+    
+    fun setXfAppId(appId: String) {
+        viewModelScope.launch {
+            appPreferences.xfAppId = appId
+        }
+    }
+    
+    fun getVoiceProvider(): String {
+        return appPreferences.voiceProvider
+    }
+    
+    fun setVoiceProvider(provider: String) {
+        viewModelScope.launch {
+            appPreferences.voiceProvider = provider
+        }
+    }
 }

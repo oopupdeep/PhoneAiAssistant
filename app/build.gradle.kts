@@ -72,6 +72,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    
+    // 讯飞语音识别SDK
+    // TODO: 下载讯飞SDK后取消注释
+    // implementation(files("libs/Msc.jar"))
 
     // Jetpack Compose
     implementation(libs.androidx.compose.ui)
@@ -90,6 +94,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.compose.markdown)
     implementation(libs.coil.compose)
+    implementation(libs.tensorflow.lite)
+    implementation(libs.tensorflow.lite.support)
     kapt(libs.hilt.compiler)
     
     // Room Database

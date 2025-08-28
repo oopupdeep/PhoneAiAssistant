@@ -27,6 +27,8 @@ import kotlinx.coroutines.Job
 import javax.inject.Inject
 import com.wang.phoneaiassistant.data.Authenticate.CompanyManager
 import com.wang.phoneaiassistant.data.entity.chat.Conversation
+import com.wang.phoneaiassistant.data.voice.IVoiceInputManager
+import com.wang.phoneaiassistant.data.voice.VoiceInputState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,13 +40,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 
 @HiltViewModel
-class ChatViewModel@Inject constructor(
+class ChatViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val chatRepository: ChatRepository,
     private val companyManager: CompanyManager,
     private val conversationRepository: ConversationRepository,
     private val contextMemoryAgent: ContextMemoryAgent,
-    private val appPreferences: AppPreference
+    private val appPreferences: AppPreference,
+    private val voiceInputManager: IVoiceInputManager
 ) : ViewModel() {
 
     // 用于取消正在进行的流式响应
@@ -107,6 +110,9 @@ class ChatViewModel@Inject constructor(
     // 上下文记忆开关状态
     private val _contextMemoryEnabled = MutableStateFlow(appPreferences.contextMemoryEnabled)
     val contextMemoryEnabled: StateFlow<Boolean> = _contextMemoryEnabled.asStateFlow()
+    
+    // 语音输入状态
+    val voiceInputState: StateFlow<VoiceInputState> = voiceInputManager.voiceInputState
 
     val filteredConversations: StateFlow<List<Conversation>> = combine(conversations, searchQuery) { convos, query ->
         if (query.isBlank()) {
@@ -129,6 +135,20 @@ class ChatViewModel@Inject constructor(
             Log.d("ChatViewModel", "Init block: Starting initialization")
             Log.d("ChatViewModel", "Init block: Context memory enabled = ${_contextMemoryEnabled.value}")
             
+            // 监听语音输入结果
+            voiceInputState.collect { state ->
+                Log.d("ChatViewModel", "Voice input state: isListening=${state.isListening}, isProcessing=${state.isProcessing}, text='${state.transcribedText}', error=${state.error}")
+                if (state.transcribedText.isNotEmpty() && !state.isListening && !state.isProcessing) {
+                    Log.d("ChatViewModel", "Updating input text with: ${state.transcribedText}")
+                    // 将识别的文本添加到输入框
+                    inputText.value = state.transcribedText
+                    // 清除转录文本
+                    voiceInputManager.clearTranscription()
+                }
+            }
+        }
+        
+        viewModelScope.launch {
             // 等待一小段时间让数据库初始化
             delay(200)
             
@@ -760,5 +780,46 @@ class ChatViewModel@Inject constructor(
         currentStreamJob?.cancel()
         currentStreamJob = null
         _isLoadingState.value = false
+    }
+    
+    // 语音输入相关方法
+    fun startVoiceInput(context: android.content.Context) {
+        Log.d("ChatViewModel", "startVoiceInput called")
+        viewModelScope.launch {
+            try {
+                // 初始化语音识别器（如果还没有初始化）
+                if (voiceInputState.value.error == "Speech recognition is not available on this device") {
+                    Log.e("ChatViewModel", "Speech recognition not available")
+                    return@launch
+                }
+                
+                Log.d("ChatViewModel", "Initializing speech recognizer")
+                voiceInputManager.initializeSpeechRecognizer(context)
+                Log.d("ChatViewModel", "Starting listening")
+                voiceInputManager.startListening(context)
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Error starting voice input", e)
+            }
+        }
+    }
+    
+    fun stopVoiceInput() {
+        voiceInputManager.stopListening()
+    }
+    
+    fun toggleVoiceInput(context: android.content.Context) {
+        Log.d("ChatViewModel", "toggleVoiceInput called, current isListening: ${voiceInputState.value.isListening}")
+        if (voiceInputState.value.isListening) {
+            Log.d("ChatViewModel", "Stopping voice input")
+            stopVoiceInput()
+        } else {
+            Log.d("ChatViewModel", "Starting voice input")
+            startVoiceInput(context)
+        }
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        voiceInputManager.destroy()
     }
 }
